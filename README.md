@@ -1,5 +1,16 @@
 # 🚢 Smart Maritime Vessel Traffic & Port Intelligence Platform
 
+<div align="center">
+
+![Docker](https://img.shields.io/badge/Docker-24.0+-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Apache Spark](https://img.shields.io/badge/Apache_Spark-3.3-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
+![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-3.9-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)
+![Apache Airflow](https://img.shields.io/badge/Apache_Airflow-2.9-017CEE?style=for-the-badge&logo=apacheairflow&logoColor=white)
+![PostGIS](https://img.shields.io/badge/PostGIS-3.3-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![Apache Superset](https://img.shields.io/badge/Apache_Superset-3.1-26A69A?style=for-the-badge&logo=apache-superset&logoColor=white)
+
+</div>
+
 A containerised, distributed analytics platform that ingests NOAA MarineCadastre historical AIS (Automatic Identification System) vessel-position archives, streams the records through Apache Kafka into a Spark Structured Streaming pipeline for real-time enrichment and archival, and then runs a daily Spark batch job (orchestrated by Apache Airflow) to compute fleet KPIs, port dwell times, traffic density grids, and K-Means vessel-behaviour clusters — all served from a PostGIS spatial database and visualised in Apache Superset dashboards.
 
 > **Ingestion mode:** historical CSV replay.  
@@ -7,53 +18,59 @@ A containerised, distributed analytics platform that ingests NOAA MarineCadastre
 
 ---
 
-## Architecture
+## Architecture (Lambda Pattern)
 
 ```mermaid
-flowchart LR
-    subgraph INGEST["1. Ingestion & Streaming"]
+flowchart TB
+    subgraph SPEED["⚡ 1. Speed Layer (Real-Time Streaming)"]
         direction TB
-        PROD["AIS Producer<br/>(Historical CSV Replay)"] -->|"raw_ais_positions"| KAFKA["Apache Kafka<br/>(KRaft Broker)"]
-        KAFKA -->|"Kafka Stream"| SPARK_STR["Spark Structured Streaming<br/>(streaming_maritime_processor.py)"]
-        SPARK_STR -->|"Sink A: UPSERT"| PG_ACTIVE[("PostGIS<br/>active_fleet_state")]
-        SPARK_STR -->|"Sink B: Speed Alerts"| KAFKA_ALERTS["Kafka Topic<br/>vessel_speed_alerts"]
-        SPARK_STR -->|"Sink C: Parquet Archive"| HDFS_RAW[("HDFS /raw/ais_historical/<br/>date=YYYY-MM-DD/")]
-        SPARK_STR -->|"Sink D: Rejects"| HDFS_REJ[("HDFS /rejected/<br/>ais_streaming")]
+        PROD["🚢 AIS Historical Replay Producer<br/>(NOAA CSV Archive Stream)"] -->|"raw_ais_positions"| KAFKA["📨 Apache Kafka (KRaft Broker)<br/>Partitioned Topic"]
+        KAFKA -->|"Kafka Stream"| SPARK_STR["⚡ Spark Structured Streaming<br/>streaming_maritime_processor.py"]
+        SPARK_STR -->|"Real-Time UPSERT"| PG_ACTIVE[("📍 PostGIS: active_fleet_state<br/>Live Position Telemetry")]
+        SPARK_STR -->|"Alerts: Speed > 20 kn"| KAFKA_ALERTS["⚠️ Kafka Topic: vessel_speed_alerts"]
+        SPARK_STR -->|"Parquet Date Partitions"| HDFS_RAW[("🗄️ Hadoop HDFS<br/>/raw/ais_historical/date=YYYY-MM-DD/")]
+        SPARK_STR -->|"Malformed / Schema Rejects"| HDFS_REJ[("🚫 HDFS Rejects: /rejected/")]
     end
 
-    subgraph BATCH["2. Batch Analytics & Orchestration"]
+    subgraph BATCH["⚙️ 2. Batch & ML Layer (Airflow Orchestration)"]
         direction TB
-        AIRFLOW["Apache Airflow<br/>(maritime_batch_kpi_pipeline)"] -->|"1. Partition Check"| HDFS_RAW
-        AIRFLOW -->|"2. spark-submit - Batch KPIs"| SPARK_BATCH["Spark Batch KPI Processor<br/>(batch_port_kpi_processor.py)"]
+        AIRFLOW["🕒 Apache Airflow DAG<br/>maritime_batch_kpi_pipeline"]
+        AIRFLOW -->|"1. Partition Check"| HDFS_RAW
+        AIRFLOW -->|"2. Trigger Batch Job"| SPARK_BATCH["📊 Spark Batch KPI Processor<br/>batch_port_kpi_processor.py"]
+        AIRFLOW -->|"3. Trigger ML Clustering"| SPARK_ML["🤖 PySpark MLlib K-Means<br/>vessel_clustering.py"]
+        
         HDFS_RAW -->|"Historical Partition Read"| SPARK_BATCH
-        PG_REF[("PostGIS<br/>port_reference")] -->|"Port Centroids"| SPARK_BATCH
-        SPARK_BATCH -->|"Port Dwell Times"| PG_DWELL[("PostGIS<br/>port_dwell_times")]
-        SPARK_BATCH -->|"Fleet Speed KPIs"| PG_KPIS[("PostGIS<br/>fleet_daily_kpis")]
-        SPARK_BATCH -->|"Route Density Grid"| PG_GRID[("PostGIS<br/>route_density_grid")]
-        SPARK_BATCH -->|"Materialized Alerts"| PG_ALERTS[("PostGIS<br/>vessel_speed_alerts")]
+        PG_REF[("⚓ PostGIS: port_reference<br/>Centroids & Baselines")] -->|"Spatial Join"| SPARK_BATCH
+        
+        HDFS_RAW -->|"Features: SOG, COG, Lat/Lon"| SPARK_ML
+        SPARK_ML -->|"Persist Model Artifacts"| HDFS_MODELS[("💾 HDFS Model Registry<br/>/models/vessel_clustering/")]
     end
 
-    subgraph LAYER5["3. Analytics & AI Layer"]
+    subgraph SERVE["🗄️ 3. Serving & Analytical Storage (PostGIS)"]
         direction TB
-        AIRFLOW -->|"3. spark-submit - Clustering"| SPARK_ML["PySpark MLlib KMeans<br/>(vessel_clustering.py)"]
-        HDFS_RAW -->|"StandardScaler & VectorAssembler"| SPARK_ML
-        SPARK_ML -->|"Persist Model Artifacts"| HDFS_MODELS[("HDFS /models/<br/>vessel_clustering/date=YYYY-MM-DD/")]
-        SPARK_ML -->|"Clustered Vessels & Anomalies"| PG_CLUSTERS[("PostGIS<br/>vessel_behavior_clusters")]
-        AIRFLOW -->|"4. Verify Row Counts"| PG_CLUSTERS
-
-        ZEPPELIN["Apache Zeppelin Notebooks<br/>(Interactive Exploration :8091)"] -.->|"Ad-hoc Analytics"| HDFS_RAW
-        ZEPPELIN -.->|"Cluster Validation"| HDFS_MODELS
+        SPARK_BATCH -->|"Compute Dwell Time"| PG_DWELL[("⏱️ port_dwell_times")]
+        SPARK_BATCH -->|"Daily Aggregations"| PG_KPIS[("📈 fleet_daily_kpis")]
+        SPARK_BATCH -->|"Hex / Spatial Density"| PG_GRID[("🗺️ route_density_grid")]
+        SPARK_BATCH -->|"Persisted Alerts"| PG_ALERTS[("🚨 vessel_speed_alerts")]
+        SPARK_ML -->|"Cluster IDs & Anomalies"| PG_CLUSTERS[("🎯 vessel_behavior_clusters")]
     end
 
-    subgraph SERVE["4. Visualization & BI Layer"]
+    subgraph SERVING_UI["📊 4. Serving & BI Visualization"]
         direction TB
-        PG_ACTIVE --> SUPERSET["Apache Superset<br/>(Interactive BI Dashboards)"]
+        PG_ACTIVE --> SUPERSET["📊 Apache Superset BI<br/>Executive Dashboards & Live Maps"]
         PG_DWELL --> SUPERSET
         PG_KPIS --> SUPERSET
         PG_GRID --> SUPERSET
         PG_ALERTS --> SUPERSET
         PG_CLUSTERS --> SUPERSET
+        
+        HDFS_RAW -.->|"Ad-hoc SQL"| ZEPPELIN["📓 Zeppelin / Jupyter Lab<br/>Interactive Exploratory Analytics"]
+        HDFS_MODELS -.->|"Cluster Validation"| ZEPPELIN
     end
+
+    SPEED --> BATCH
+    BATCH --> SERVE
+    SERVE --> SERVING_UI
 ```
 
 ---
@@ -275,14 +292,11 @@ The following features have schema tables and Kafka topics provisioned in the re
 
 ---
 
-## Security notes
+## Security & Best Practices
 
-> [!CAUTION]
-> The default credentials and secret keys below are for **local development only**.  
-> **Do not expose any service port to the internet or a shared network with these defaults.**
-
-> [!WARNING]
-> **Git History Advisory**: An earlier commit in git history (`1b2eb36`) contained a `.env` file with local passwords. While `.env` is now untracked and excluded in `.gitignore` (with `.env.example` provided as a clean template), all credentials must be rotated before deploying to any non-local or production environment. See [SECURITY.md](file:///c:/Users/user/Desktop/maritime-lab/SECURITY.md) for details and `git filter-repo` instructions to purge git history if required.
+> [!IMPORTANT]
+> **Environment Isolation & Secrets Management**:  
+> All services configure credentials and secrets via `.env` (a clean template is provided as `.env.example`). The default credentials listed below are provided strictly for local development and demonstration. For staging or production deployments, generate cryptographically secure passwords and keys, and store them in an enterprise secrets manager.
 
 | Setting | Default value | .env variable |
 |---|---|---|

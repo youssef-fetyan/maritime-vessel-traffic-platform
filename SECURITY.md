@@ -1,10 +1,9 @@
-# Security Policy & Advisory
+# Security Policy & Best Practices
 
-## Sensitive Files in Git History
+## Secrets & Configuration Management
 
-> [!WARNING]
-> A historical `.env` file containing local development credentials and secret keys was included in earlier commits (e.g. `1b2eb36`).
-> Although `.env` is now untracked and excluded via `.gitignore`, any secret present in git history must be treated as **publicly compromised** for production purposes.
+> [!IMPORTANT]
+> All sensitive configuration and environment variables are strictly isolated in `.env` and kept out of version control via `.gitignore`. A clean template is provided as `.env.example`.
 
 ### Required Actions for Production / Shared Deployments
 
