@@ -1,0 +1,372 @@
+{
+  "paragraphs": [
+    {
+      "title": "Maritime AI Analytics \u2014 Architecture & Overview",
+      "text": "%md\n# \u2693 Smart Maritime Vessel Traffic & Port Intelligence Platform\n## Layer 5: ML Clustering & Anomaly Detection Analytics\n\n---\n\n### System Architecture\n* **Data Source:** AIS dynamic position pings stored in HDFS (`/raw/ais_historical/date=YYYY-MM-DD`).\n* **ML Pipeline:** PySpark MLlib `KMeans` ($k=5$) trained on standardized navigational features ($SOG, COG, LAT, LON$).\n* **Anomaly Engine:** Euclidean distance to cluster centroid with $95^{\\text{th}}$-percentile threshold per cluster.\n* **Serving Store:** PostGIS table `vessel_behavior_clusters` in `postgis:5432/maritime`.\n\n### Cluster Behavioral Profiles\n\u26a0\ufe0f The descriptions below are illustrative examples from one historical run. Cluster IDs are arbitrary and their real-world meaning must be re-derived from the query above any time the reference model is refit.\n\n| Cluster ID | Profile Description | Avg SOG | Behavioral Characteristics |\n|:---:|:---|:---:|:---|\n| **0** | Anchored / Stationary | ~0.50 kn | Waiting at anchorage or docked at berth |\n| **1** | Fast Transit | ~12.5 kn | Merchant vessels / container ships in transit corridors |\n| **2** | Low-Speed Manoeuvring | ~0.60 kn | Tug operations, harbour maneuvering, canal queuing |\n| **3** | Drifting / Port Operations | ~0.57 kn | Congested port approaches, slow steaming |\n| **4** | Moderate Speed Coastal | ~0.62 kn | Fishing vessels, patrol craft, inter-island routes |\n\n> **Note on Execution:** This notebook utilizes the native `%jdbc` (PostGIS) and `%python` / `%sh` interpreters to query materialized Layer 5 ML results directly, delivering instant interactive visualization with zero dependency on Spark session overhead.\n",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "markdown",
+          "editOnDblClick": true
+        },
+        "editorMode": "ace/mode/markdown",
+        "editorHide": true,
+        "tableHide": false
+      },
+      "status": "READY"
+    },
+    {
+      "title": "1. Cluster Distribution \u2014 Vessel Count per Cluster (Bar Chart)",
+      "text": "%jdbc(default)\n-- ============================================================================\n-- Cluster Distribution: Total Vessel Count per Behavior Cluster\n-- Renders out-of-the-box as an interactive Bar Chart in Zeppelin\n-- ============================================================================\nSELECT\n    'Cluster ' || cluster_id::text AS cluster_label,\n    COUNT(*) AS vessel_count\nFROM vessel_behavior_clusters\nGROUP BY cluster_id\nORDER BY cluster_id;\n",
+      "config": {
+        "colWidth": 6.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "multiBarChart",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "multiBarChart": {
+                  "rotate": {
+                    "degree": "-45"
+                  },
+                  "xLabelStatus": "default"
+                }
+              },
+              "keys": [
+                {
+                  "name": "cluster_label",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "vessel_count",
+                  "index": 1,
+                  "aggr": "sum"
+                }
+              ]
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "2. Fleet Anomaly Distribution (Pie Chart)",
+      "text": "%jdbc(default)\n-- ============================================================================\n-- Anomaly vs Normal Fleet Breakdown\n-- Renders out-of-the-box as an interactive Pie Chart in Zeppelin\n-- ============================================================================\nSELECT\n    CASE WHEN is_anomaly THEN 'Outlier / Anomaly (Distance > P95)'\n         ELSE 'Normal Navigation Profile'\n    END AS fleet_status,\n    COUNT(*) AS vessel_count\nFROM vessel_behavior_clusters\nGROUP BY is_anomaly\nORDER BY is_anomaly DESC;\n",
+      "config": {
+        "colWidth": 6.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "pieChart",
+              "height": 300,
+              "optionOpen": false,
+              "keys": [
+                {
+                  "name": "fleet_status",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "vessel_count",
+                  "index": 1,
+                  "aggr": "sum"
+                }
+              ]
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "3. Cluster Breakdown: Anomalies vs Normal Vessels",
+      "text": "%jdbc(default)\n-- ============================================================================\n-- Anomaly Counts per Cluster\n-- Displays total fleet, normal vessels, and outlier count per cluster\n-- ============================================================================\nSELECT\n    'Cluster ' || cluster_id::text AS cluster_name,\n    COUNT(*) AS total_fleet,\n    SUM(CASE WHEN NOT is_anomaly THEN 1 ELSE 0 END) AS normal_vessels,\n    SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) AS anomalous_vessels,\n    ROUND(100.0 * SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) / COUNT(*), 2) AS anomaly_pct\nFROM vessel_behavior_clusters\nGROUP BY cluster_id\nORDER BY cluster_id;\n",
+      "config": {
+        "colWidth": 6.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "multiBarChart",
+              "height": 300,
+              "optionOpen": false,
+              "keys": [
+                {
+                  "name": "cluster_name",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "normal_vessels",
+                  "index": 2,
+                  "aggr": "sum"
+                },
+                {
+                  "name": "anomalous_vessels",
+                  "index": 3,
+                  "aggr": "sum"
+                }
+              ]
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "4. Average Navigational Metrics per Cluster (SOG & Distance)",
+      "text": "%jdbc(default)\n-- ============================================================================\n-- Navigational Speed (SOG) & Outlier Metric (Distance to Centroid)\n-- ============================================================================\nSELECT\n    'Cluster ' || cluster_id::text AS cluster_name,\n    ROUND(AVG(sog_knots)::numeric, 2) AS avg_sog_knots,\n    ROUND(AVG(cog_degrees)::numeric, 1) AS avg_cog_degrees,\n    ROUND(AVG(distance_to_centroid)::numeric, 4) AS avg_distance_to_centroid\nFROM vessel_behavior_clusters\nGROUP BY cluster_id\nORDER BY cluster_id;\n",
+      "config": {
+        "colWidth": 6.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "multiBarChart",
+              "height": 300,
+              "optionOpen": false,
+              "keys": [
+                {
+                  "name": "cluster_name",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "avg_sog_knots",
+                  "index": 1,
+                  "aggr": "sum"
+                }
+              ]
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "5. Daily Anomaly Trend Across Partition Dates (Line Chart)",
+      "text": "%jdbc(default)\n-- ============================================================================\n-- Daily Trend: Active Fleet vs Anomalous Vessel Count\n-- Switch to Line Chart for multi-day temporal analysis\n-- ============================================================================\nSELECT\n    kpi_date::text AS partition_date,\n    COUNT(*) AS total_active_vessels,\n    SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) AS anomalous_vessels,\n    ROUND(100.0 * SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) / COUNT(*), 2) AS anomaly_rate_pct\nFROM vessel_behavior_clusters\nGROUP BY kpi_date\nORDER BY kpi_date;\n",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "lineChart",
+              "height": 300,
+              "optionOpen": false,
+              "keys": [
+                {
+                  "name": "partition_date",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "total_active_vessels",
+                  "index": 1,
+                  "aggr": "sum"
+                },
+                {
+                  "name": "anomalous_vessels",
+                  "index": 2,
+                  "aggr": "sum"
+                }
+              ]
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "6. Top Outliers: Highest Distance to Centroid (Inspection Table)",
+      "text": "%jdbc(default)\n-- ============================================================================\n-- Top 20 Outliers ranked by Euclidean distance to KMeans centroid\n-- Useful for maritime safety operations and suspicious movement review\n-- ============================================================================\nSELECT\n    mmsi,\n    kpi_date::text AS observation_date,\n    cluster_id,\n    ROUND(distance_to_centroid::numeric, 4) AS distance_to_centroid,\n    ROUND(sog_knots::numeric, 2) AS sog_knots,\n    ROUND(cog_degrees::numeric, 1) AS cog_degrees,\n    ROUND(lat::numeric, 4) AS latitude,\n    ROUND(lon::numeric, 4) AS longitude,\n    is_anomaly\nFROM vessel_behavior_clusters\nWHERE is_anomaly = TRUE\nORDER BY distance_to_centroid DESC\nLIMIT 20;\n",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 320,
+              "optionOpen": false
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "7. Bash / Tabular Query: PostGIS Querying with %table Output",
+      "text": "%sh\n# ============================================================================\n# Bash querying PostGIS using Python driver to output Zeppelin %table format\n# Renders native chart controls out-of-the-box\n# ============================================================================\npython3 - << 'PYEOF'\nimport pg8000.dbapi as pg\n\nconn = pg.connect(\n    host=\"postgis\", port=5432,\n    database=\"maritime\", user=\"maritime\", password=\"maritime\"\n)\ncur = conn.cursor()\ncur.execute('''\n    SELECT\n        cluster_id,\n        COUNT(*) AS total_vessels,\n        SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) AS anomalies,\n        ROUND(AVG(sog_knots)::numeric, 2) AS avg_sog,\n        ROUND(AVG(distance_to_centroid)::numeric, 4) AS avg_dist\n    FROM vessel_behavior_clusters\n    GROUP BY cluster_id\n    ORDER BY cluster_id\n''')\nrows = cur.fetchall()\nconn.close()\n\n# Emit Zeppelin %table format with tab delimiters\nprint(\"%table cluster_id\\ttotal_vessels\\tanomalies\\tavg_sog\\tavg_dist\")\nfor r in rows:\n    print(f\"{r[0]}\\t{r[1]}\\t{r[2]}\\t{r[3]}\\t{r[4]}\")\nPYEOF\n",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "multiBarChart",
+              "height": 300,
+              "optionOpen": false,
+              "keys": [
+                {
+                  "name": "cluster_id",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "total_vessels",
+                  "index": 1,
+                  "aggr": "sum"
+                },
+                {
+                  "name": "anomalies",
+                  "index": 2,
+                  "aggr": "sum"
+                }
+              ]
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sh",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sh"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "8. Python: Model Performance Metrics & Cluster Analytics",
+      "text": "%python\n# ============================================================================\n# Python Paragraph: Comprehensive Model Metrics & Statistical Summary\n# ============================================================================\nimport pg8000.dbapi as pg\nimport pandas as pd\nfrom datetime import datetime\n\nconn = pg.connect(\n    host=\"postgis\", port=5432,\n    database=\"maritime\", user=\"maritime\", password=\"maritime\"\n)\n\n# 1. Load summary aggregates\ncur = conn.cursor()\ncur.execute('''\n    SELECT\n        cluster_id,\n        COUNT(*) AS vessel_count,\n        SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) AS anomaly_count,\n        ROUND(AVG(sog_knots)::numeric, 2) AS avg_sog,\n        ROUND(MIN(sog_knots)::numeric, 2) AS min_sog,\n        ROUND(MAX(sog_knots)::numeric, 2) AS max_sog,\n        ROUND(AVG(distance_to_centroid)::numeric, 4) AS avg_dist,\n        ROUND(MAX(distance_to_centroid)::numeric, 4) AS max_dist\n    FROM vessel_behavior_clusters\n    GROUP BY cluster_id\n    ORDER BY cluster_id;\n''')\nrecords = cur.fetchall()\n\n# 2. Overall counts\ncur.execute('''\n    SELECT\n        COUNT(*),\n        COUNT(DISTINCT mmsi),\n        COUNT(DISTINCT kpi_date),\n        MIN(kpi_date),\n        MAX(kpi_date),\n        SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END)\n    FROM vessel_behavior_clusters;\n''')\ntotal_rows, unique_mmsi, num_dates, min_d, max_d, total_anom = cur.fetchone()\nconn.close()\n\n# Format and display KPIs\nprint(\"=\" * 85)\nprint(\"     SMART MARITIME AI \u2014 LAYER 5 VESSEL CLUSTERING & ANOMALY KPI REPORT\")\nprint(f\"     Report Timestamp: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\")\nprint(\"=\" * 85)\nprint(f\"  \u2022 Total Materialized Records : {total_rows:>10,}\")\nprint(f\"  \u2022 Unique Tracked Vessels     : {unique_mmsi:>10,}\")\nprint(f\"  \u2022 Temporal Coverage (Dates)  : {num_dates} partition day(s) [{min_d} to {max_d}]\")\nprint(f\"  \u2022 Fleet Anomalies Detected   : {total_anom:>10,} ({(total_anom/total_rows*100):.2f}% of fleet)\")\nprint(f\"  \u2022 Nominal Operating Vessels  : {total_rows - total_anom:>10,} ({((total_rows-total_anom)/total_rows*100):.2f}% of fleet)\")\nprint(\"-\" * 85)\nprint(f\"  {'Cluster':<10} {'Vessels':>8} {'Share%':>8} {'Anomalies':>10} {'Anom Rate':>10} {'Avg SOG':>10} {'Avg Dist':>12}\")\nprint(\"-\" * 85)\n\nfor r in records:\n    c_id, v_cnt, a_cnt, avg_sog, min_sog, max_sog, avg_dist, max_dist = r\n    share = (v_cnt / total_rows) * 100\n    a_rate = (a_cnt / v_cnt) * 100 if v_cnt > 0 else 0\n    print(f\"  Cluster {c_id:<2} {v_cnt:>8,} {share:>7.1f}% {a_cnt:>10,} {a_rate:>9.2f}% {float(avg_sog):>8.2f} kn {float(avg_dist):>12.4f}\")\n\nprint(\"=\" * 85)\n",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "9. Python: Visualizing Feature Distributions & Cluster Characteristics",
+      "text": "%python\n# ============================================================================\n# Python Matplotlib Inline Visualization: SOG Distributions & Anomaly Scatter\n# ============================================================================\nimport pg8000.dbapi as pg\nimport pandas as pd\nimport matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nimport io, base64\n\nconn = pg.connect(\n    host=\"postgis\", port=5432,\n    database=\"maritime\", user=\"maritime\", password=\"maritime\"\n)\n\ndf = pd.read_sql('''\n    SELECT\n        cluster_id,\n        sog_knots::float AS sog_knots,\n        distance_to_centroid::float AS dist,\n        is_anomaly\n    FROM vessel_behavior_clusters\n    WHERE sog_knots IS NOT NULL\n''', conn)\nconn.close()\n\nclusters = sorted(df['cluster_id'].unique())\npalette = ['#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd', '#d62728']\n\nfig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))\nfig.suptitle(\"Layer 5 AI: Vessel Speed & Distance-to-Centroid Distributions\", fontsize=13, fontweight='bold')\n\n# 1. SOG by cluster (boxplot)\ndata_by_cluster = [df[df['cluster_id'] == c]['sog_knots'].values for c in clusters]\nbp = ax1.boxplot(data_by_cluster, patch_artist=True, labels=[f\"Cluster {c}\" for c in clusters])\nfor patch, color in zip(bp['boxes'], palette):\n    patch.set_facecolor(color)\n    patch.set_alpha(0.7)\nax1.set_title(\"Speed Over Ground (SOG) Distribution by Cluster\", fontsize=11)\nax1.set_ylabel(\"Speed (knots)\")\nax1.grid(axis='y', linestyle='--', alpha=0.5)\n\n# 2. Anomaly distance distribution\nfor c, color in zip(clusters, palette):\n    sub = df[df['cluster_id'] == c]['dist']\n    ax2.hist(sub, bins=30, alpha=0.5, label=f\"Cluster {c}\", color=color, density=True)\n\nax2.set_title(\"Distance-to-Centroid Density (Outlier Spread)\", fontsize=11)\nax2.set_xlabel(\"Euclidean Distance to Centroid\")\nax2.set_ylabel(\"Density\")\nax2.legend(fontsize=9)\nax2.grid(axis='y', linestyle='--', alpha=0.5)\n\nplt.tight_layout()\nbuf = io.BytesIO()\nplt.savefig(buf, format='png', dpi=120, bbox_inches='tight')\nbuf.seek(0)\nimg_b64 = base64.b64encode(buf.read()).decode('utf-8')\nplt.close(fig)\n\nprint('%html <div style=\"text-align:center; padding: 5px;\">')\nprint(f'<img src=\"data:image/png;base64,{img_b64}\" style=\"max-width:100%; border:1px solid #ddd; border-radius:6px;\" />')\nprint('</div>')\n",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "status": "READY"
+    },
+    {
+      "title": "10. Full Cluster Statistical Matrix (Detailed Tabular View)",
+      "text": "%jdbc(default)\n-- ============================================================================\n-- Complete Cluster Performance & Geometrical Coverage Matrix\n-- ============================================================================\nSELECT\n    cluster_id,\n    COUNT(*) AS fleet_count,\n    SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) AS anomaly_count,\n    ROUND(100.0 * SUM(CASE WHEN is_anomaly THEN 1 ELSE 0 END) / COUNT(*), 2) AS anomaly_rate_pct,\n    ROUND(AVG(sog_knots)::numeric, 2) AS avg_sog_knots,\n    ROUND(AVG(cog_degrees)::numeric, 1) AS avg_cog_degrees,\n    ROUND(AVG(distance_to_centroid)::numeric, 4) AS avg_distance,\n    ROUND(MAX(distance_to_centroid)::numeric, 4) AS max_distance,\n    COUNT(*) FILTER (WHERE geom IS NOT NULL) AS vessels_with_geom\nFROM vessel_behavior_clusters\nGROUP BY cluster_id\nORDER BY cluster_id;\n",
+      "config": {
+        "colWidth": 12.0,
+        "fontSize": 9.0,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 280,
+              "optionOpen": false
+            }
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "status": "READY"
+    }
+  ],
+  "name": "Maritime_AI_Clustering_Analytics",
+  "id": "MARITIME01",
+  "defaultInterpreterGroup": "jdbc",
+  "version": "0.9.0-preview1",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {},
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {}
+}

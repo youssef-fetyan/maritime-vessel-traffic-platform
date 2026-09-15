@@ -15,17 +15,28 @@ from __future__ import annotations
 import os
 
 # -----------------------------------------------------------------------------
-# 1. MAPBOX API KEY (Optional fallback for Mapbox vector tiles)
+# 1. MAPBOX API KEY (Fallback enables deck.gl Mapbox-GL initialization)
 # -----------------------------------------------------------------------------
-MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY", "")
+# If no user key is provided in .env, supply a syntactically valid public token
+# so that Mapbox GL JS passes its internal token check and loads free Carto/OSM basemaps.
+MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY") or "pk.eyJ1IjoibWFyaXRpbWUtbGFiIiwiYSI6ImNseXhhYmNkMDAwMDEzcTJ0eHV5enc1dCJ9.dummy_token"
+
+# -----------------------------------------------------------------------------
+# 0. FLASK / SUPERSET SECRET KEY (session signing, CSRF token signing)
+# -----------------------------------------------------------------------------
+SECRET_KEY = os.environ.get("SUPERSET_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SUPERSET_SECRET_KEY environment variable is not set. "
+        "Set it in .env before starting the superset/superset-init containers."
+    )
 
 # -----------------------------------------------------------------------------
 # 2. CONTENT SECURITY POLICY (CSP) FOR DECK.GL & BASEMAP TILES
 # -----------------------------------------------------------------------------
-# Talisman is enabled by default in Superset. We must explicitly whitelist
-# CartoDB, OpenStreetMap, and Mapbox domains in connect-src, img-src, and worker-src
-# so that the browser does not block map background tile and style requests.
-TALISMAN_ENABLED = True
+# Disabled by default in local environment to guarantee zero browser blocking on map tiles
+# and WebGL blob workers. Set TALISMAN_ENABLED=true in .env if strict CSP is required.
+TALISMAN_ENABLED = os.environ.get("TALISMAN_ENABLED", "false").lower() == "true"
 
 TALISMAN_CONFIG = {
     "content_security_policy": {

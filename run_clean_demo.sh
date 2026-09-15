@@ -160,8 +160,8 @@ done
 write_success "HDFS SafeMode toggled OFF."
 
 write_info "Ensuring base HDFS directories exist..."
-docker compose exec -T namenode hdfs dfs -mkdir -p /raw /raw/ais_historical /processed /processed/parquet /curated /models /models/vessel_clustering /checkpoints >/dev/null 2>&1 || true
-docker compose exec -T namenode hdfs dfs -chmod -R 777 /raw /processed /curated /models /checkpoints >/dev/null 2>&1 || true
+docker compose exec -T namenode hdfs dfs -mkdir -p /raw/ais_historical /rejected /models/vessel_clustering /checkpoints >/dev/null 2>&1 || true
+docker compose exec -T namenode hdfs dfs -chmod -R 777 /raw /rejected /models /checkpoints >/dev/null 2>&1 || true
 write_success "HDFS directory structure verified."
 
 write_info "Applying 4 core database DDL initialization scripts in strict order..."
@@ -186,32 +186,24 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# STEP 4: SPARK ML DEPENDENCIES VALIDATION & RUNTIME PATCH
+# STEP 4: SPARK ML DEPENDENCIES VALIDATION
 # ------------------------------------------------------------------------------
 write_step "STEP 4/7" "Validating Spark Python 3 NumPy & MLlib Dependencies"
 
-ensure_spark_packages() {
+validate_spark_packages() {
     local SERVICE="$1"
     write_info "Inspecting Python 3 & NumPy in container '$SERVICE'..."
     if docker compose exec -T "$SERVICE" python3 -c "import numpy, pg8000" >/dev/null 2>&1; then
         local V=$(docker compose exec -T "$SERVICE" python3 -c "import numpy; print(numpy.__version__)" | tr -d '[:space:]')
         write_success "$SERVICE Python 3 ready (NumPy v$V, pg8000 installed)."
     else
-        write_warning "NumPy missing in $SERVICE! Applying HTTPS Alpine v3.10 repository fix..."
-        docker compose exec -T "$SERVICE" sh -c '
-            echo "https://dl-cdn.alpinelinux.org/alpine/v3.10/main" > /etc/apk/repositories &&
-            echo "https://dl-cdn.alpinelinux.org/alpine/v3.10/community" >> /etc/apk/repositories &&
-            apk update -q &&
-            apk add --no-cache py3-numpy -q &&
-            python3 -m pip install --no-cache-dir -q pg8000
-        '
-        docker compose exec -T "$SERVICE" python3 -c "import numpy, pg8000" >/dev/null 2>&1
-        write_success "$SERVICE dynamically patched with NumPy & pg8000."
+        write_error "$SERVICE missing Python dependencies (numpy, pg8000). Please rebuild Spark images: docker compose build spark-master spark-worker"
+        exit 1
     fi
 }
 
-ensure_spark_packages "spark-master"
-ensure_spark_packages "spark-worker"
+validate_spark_packages "spark-master"
+validate_spark_packages "spark-worker"
 
 # ------------------------------------------------------------------------------
 # STEP 5: BACKGROUND STREAMING & DATA INGESTION
@@ -225,14 +217,18 @@ write_success "AIS Producer container launched to feed 'raw_ais_positions' Kafka
 write_info "Submitting Spark Structured Streaming job ('streaming_maritime_processor.py') in background..."
 write_info "Logs redirected to local file: logs/spark_streaming.log"
 
-nohup docker compose exec -T -e RUN_MODE=live spark-master /spark/bin/spark-submit \
+# worker=6G, 6 cores; streaming=1.5G/3 cores, batch=1.5G/3 cores — both can run concurrently
+nohup docker compose exec -T -e RUN_MODE=live \
+  -e POSTGIS_HOST -e POSTGIS_PORT -e POSTGIS_DB -e POSTGIS_USER -e POSTGIS_PASSWORD \
+  spark-master /spark/bin/spark-submit \
   --master spark://spark-master:7077 \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,org.postgresql:postgresql:42.6.0 \
   --conf spark.pyspark.python=python3 \
   --conf spark.pyspark.driver.python=python3 \
   --conf spark.sql.shuffle.partitions=8 \
-  --conf spark.executor.memory=2g \
-  --conf spark.driver.memory=1g \
+  --conf spark.executor.memory=1536m \
+  --conf spark.driver.memory=768m \
+  --conf spark.cores.max=3 \
   /opt/spark-apps/streaming_maritime_processor.py > logs/spark_streaming.log 2>&1 &
 
 STREAMING_PID=$!
@@ -241,18 +237,25 @@ write_success "Spark Structured Streaming initiated (PID: $STREAMING_PID)."
 echo -e " ${C_GRAY}-> Waiting for streaming micro-batches to materialize in PostGIS and HDFS...${C_RESET}"
 FLEET_COUNT=0
 HDFS_PARTITION_READY=false
+PRODUCER_DONE=false
 
-for attempt in {1..30}; do
+for attempt in {1..40}; do
     sleep 3
     FLEET_COUNT=$(docker compose exec -T postgis psql -U maritime -d maritime -t -c "SELECT count(*) FROM active_fleet_state;" 2>/dev/null | tr -d '[:space:]' || echo "0")
     
-    if docker compose exec -T namenode hdfs dfs -test -d "/raw/ais_historical/date=$TARGET_DATE" >/dev/null 2>&1; then
+    if docker compose exec -T namenode hdfs dfs -ls "/raw/ais_historical/date=$TARGET_DATE" 2>/dev/null | grep -q '\.parquet'; then
         HDFS_PARTITION_READY=true
     fi
 
-    echo -e "    ${C_GRAY}[Tick $attempt/30] Active vessels in PostGIS: ${FLEET_COUNT:-0} | HDFS date=$TARGET_DATE ready: $HDFS_PARTITION_READY${C_RESET}"
+    PRODUCER_STATUS=$(docker compose ps -a --format '{{.State}}' ais-producer 2>/dev/null || echo "unknown")
+    if [ "$PRODUCER_STATUS" = "exited" ]; then
+        PRODUCER_DONE=true
+    fi
 
-    if [ "${FLEET_COUNT:-0}" -gt 0 ] && [ "$HDFS_PARTITION_READY" = "true" ]; then
+    echo -e "    ${C_GRAY}[Tick $attempt/40] Active vessels: ${FLEET_COUNT:-0} | Producer finished: $PRODUCER_DONE | HDFS parquet ready: $HDFS_PARTITION_READY${C_RESET}"
+
+    if [ "$HDFS_PARTITION_READY" = "true" ] && { [ "${FLEET_COUNT:-0}" -gt 0 ] || [ "$PRODUCER_DONE" = "true" ]; }; then
+        sleep 5
         break
     fi
 done
@@ -262,10 +265,9 @@ if [ "${FLEET_COUNT:-0}" -gt 0 ]; then
 fi
 
 if [ "$HDFS_PARTITION_READY" = "true" ]; then
-    write_success "HDFS date partition /raw/ais_historical/date=$TARGET_DATE successfully archived."
+    write_success "HDFS date partition /raw/ais_historical/date=$TARGET_DATE successfully archived with Parquet files."
 else
-    write_warning "Ensuring partition directory in HDFS..."
-    docker compose exec -T namenode hdfs dfs -mkdir -p "/raw/ais_historical/date=$TARGET_DATE" >/dev/null 2>&1 || true
+    write_warning "HDFS partition /raw/ais_historical/date=$TARGET_DATE does not yet contain Parquet files; DAG verification will validate arrival."
 fi
 
 # ------------------------------------------------------------------------------
@@ -279,15 +281,16 @@ write_info "Unpausing Airflow DAG '$DAG_ID'..."
 docker compose exec -T airflow-scheduler airflow dags unpause "$DAG_ID" >/dev/null 2>&1 || true
 write_success "DAG '$DAG_ID' unpaused."
 
-write_info "Triggering DAG execution for partition date: $TARGET_DATE..."
-docker compose exec -T airflow-scheduler airflow dags trigger "$DAG_ID" -e "$TARGET_DATE" >/dev/null 2>&1 || true
+RUN_ID="manual__${TARGET_DATE}T00:00:00+00:00"
+write_info "Triggering DAG execution for partition date: $TARGET_DATE (run_id: $RUN_ID)..."
+docker compose exec -T airflow-scheduler airflow dags trigger "$DAG_ID" -e "$TARGET_DATE" -r "$RUN_ID" >/dev/null 2>&1 || true
 
 write_info "Beginning active task polling loop (refreshing every 10 seconds)..."
 
 REQUIRED_TASKS=(
     "check_hdfs_partition_exists"
     "run_batch_kpi_job"
-    "run_mahout_clustering_job"
+    "run_vessel_clustering_job"
     "verify_postgres_rows_written"
     "pipeline_health_check"
 )
@@ -296,7 +299,7 @@ ALL_SUCCEEDED=false
 for poll in {1..45}; do
     sleep 10
     
-    JSON_OUTPUT=$(docker compose exec -T airflow-scheduler airflow tasks states-for-dag-run "$DAG_ID" "$TARGET_DATE" -o json 2>/dev/null || echo "")
+    JSON_OUTPUT=$(docker compose exec -T airflow-scheduler airflow tasks states-for-dag-run "$DAG_ID" "$RUN_ID" -o json 2>/dev/null || echo "")
     
     if echo "$JSON_OUTPUT" | grep -q '^\['; then
         echo -e "\n${C_WHITE}--- [Airflow Task Status | Poll #$poll] ---${C_RESET}"
@@ -328,7 +331,7 @@ except Exception:
 
         if [ "$HAS_FAILURE" = "true" ]; then
             write_error "One or more tasks in DAG '$DAG_ID' failed! Inspecting attempt logs..."
-            docker compose exec -T airflow-scheduler tail -n 30 "/opt/airflow/logs/dag_id=$DAG_ID/run_id=manual__${TARGET_DATE}T00:00:00+00:00/task_id=run_mahout_clustering_job/attempt=1.log" 2>/dev/null || true
+            docker compose exec -T airflow-scheduler tail -n 30 "/opt/airflow/logs/dag_id=$DAG_ID/run_id=${RUN_ID}/task_id=run_vessel_clustering_job/attempt=1.log" 2>/dev/null || true
             exit 1
         fi
 
@@ -384,7 +387,7 @@ docker compose exec -T postgis psql -U maritime -d maritime -c "
     ORDER BY cluster_id;
 "
 
-echo -e "\n${C_YELLOW}4. Serialized PySpark MLlib / Mahout Model in HDFS:${C_RESET}"
+echo -e "\n${C_YELLOW}4. Serialized PySpark MLlib Model in HDFS:${C_RESET}"
 docker compose exec -T namenode hdfs dfs -ls -R "/models/vessel_clustering/date=$TARGET_DATE"
 
 # 5. Provision / Hydrate Apache Superset Dashboards & Visualizations

@@ -1,82 +1,84 @@
 :: loading settings :: url = jar:file:/spark/jars/ivy-2.5.0.jar!/org/apache/ivy/core/settings/ivysettings.xml
-26/09/09 22:23:29 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-26/09/09 22:23:32 INFO SparkContext: Running Spark version 3.3.0
-26/09/09 22:23:32 INFO ResourceUtils: ==============================================================
-26/09/09 22:23:32 INFO ResourceUtils: No custom resources configured for spark.driver.
-26/09/09 22:23:32 INFO ResourceUtils: ==============================================================
-26/09/09 22:23:32 INFO SparkContext: Submitted application: AIS-MultiSink-Streaming
-26/09/09 22:23:32 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 2048, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
-26/09/09 22:23:32 INFO ResourceProfile: Limiting resource is cpu
-26/09/09 22:23:32 INFO ResourceProfileManager: Added ResourceProfile id: 0
-26/09/09 22:23:33 INFO SecurityManager: Changing view acls to: root
-26/09/09 22:23:33 INFO SecurityManager: Changing modify acls to: root
-26/09/09 22:23:33 INFO SecurityManager: Changing view acls groups to: 
-26/09/09 22:23:33 INFO SecurityManager: Changing modify acls groups to: 
-26/09/09 22:23:33 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(root); groups with view permissions: Set(); users  with modify permissions: Set(root); groups with modify permissions: Set()
-26/09/09 22:23:34 INFO Utils: Successfully started service 'sparkDriver' on port 43021.
-26/09/09 22:23:34 INFO SparkEnv: Registering MapOutputTracker
-26/09/09 22:23:34 INFO SparkEnv: Registering BlockManagerMaster
-26/09/09 22:23:34 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
-26/09/09 22:23:34 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
-26/09/09 22:23:34 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
-26/09/09 22:23:34 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-f646ba98-c53e-4e01-b7b6-006a7d5d941e
-26/09/09 22:23:34 INFO MemoryStore: MemoryStore started with capacity 366.3 MiB
-26/09/09 22:23:34 INFO SparkEnv: Registering OutputCommitCoordinator
-26/09/09 22:23:35 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
-26/09/09 22:23:35 INFO Utils: Successfully started service 'SparkUI' on port 4041.
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:43021/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.postgresql_postgresql-42.6.0.jar at spark://spark-master:43021/jars/org.postgresql_postgresql-42.6.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:43021/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.kafka_kafka-clients-2.8.1.jar at spark://spark-master:43021/jars/org.apache.kafka_kafka-clients-2.8.1.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/com.google.code.findbugs_jsr305-3.0.0.jar at spark://spark-master:43021/jars/com.google.code.findbugs_jsr305-3.0.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.commons_commons-pool2-2.11.1.jar at spark://spark-master:43021/jars/org.apache.commons_commons-pool2-2.11.1.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.spark-project.spark_unused-1.0.0.jar at spark://spark-master:43021/jars/org.spark-project.spark_unused-1.0.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar at spark://spark-master:43021/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.lz4_lz4-java-1.8.0.jar at spark://spark-master:43021/jars/org.lz4_lz4-java-1.8.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar at spark://spark-master:43021/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.slf4j_slf4j-api-1.7.32.jar at spark://spark-master:43021/jars/org.slf4j_slf4j-api-1.7.32.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar at spark://spark-master:43021/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/commons-logging_commons-logging-1.1.3.jar at spark://spark-master:43021/jars/commons-logging_commons-logging-1.1.3.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.checkerframework_checker-qual-3.31.0.jar at spark://spark-master:43021/jars/org.checkerframework_checker-qual-3.31.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:43021/files/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.postgresql_postgresql-42.6.0.jar at spark://spark-master:43021/files/org.postgresql_postgresql-42.6.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.postgresql_postgresql-42.6.0.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.postgresql_postgresql-42.6.0.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:43021/files/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.kafka_kafka-clients-2.8.1.jar at spark://spark-master:43021/files/org.apache.kafka_kafka-clients-2.8.1.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.apache.kafka_kafka-clients-2.8.1.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.apache.kafka_kafka-clients-2.8.1.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/com.google.code.findbugs_jsr305-3.0.0.jar at spark://spark-master:43021/files/com.google.code.findbugs_jsr305-3.0.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/com.google.code.findbugs_jsr305-3.0.0.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/com.google.code.findbugs_jsr305-3.0.0.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.commons_commons-pool2-2.11.1.jar at spark://spark-master:43021/files/org.apache.commons_commons-pool2-2.11.1.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.apache.commons_commons-pool2-2.11.1.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.apache.commons_commons-pool2-2.11.1.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.spark-project.spark_unused-1.0.0.jar at spark://spark-master:43021/files/org.spark-project.spark_unused-1.0.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.spark-project.spark_unused-1.0.0.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.spark-project.spark_unused-1.0.0.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar at spark://spark-master:43021/files/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.lz4_lz4-java-1.8.0.jar at spark://spark-master:43021/files/org.lz4_lz4-java-1.8.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.lz4_lz4-java-1.8.0.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.lz4_lz4-java-1.8.0.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar at spark://spark-master:43021/files/org.xerial.snappy_snappy-java-1.1.8.4.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.xerial.snappy_snappy-java-1.1.8.4.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.slf4j_slf4j-api-1.7.32.jar at spark://spark-master:43021/files/org.slf4j_slf4j-api-1.7.32.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.slf4j_slf4j-api-1.7.32.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.slf4j_slf4j-api-1.7.32.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar at spark://spark-master:43021/files/org.apache.hadoop_hadoop-client-api-3.3.2.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.apache.hadoop_hadoop-client-api-3.3.2.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/commons-logging_commons-logging-1.1.3.jar at spark://spark-master:43021/files/commons-logging_commons-logging-1.1.3.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/commons-logging_commons-logging-1.1.3.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/commons-logging_commons-logging-1.1.3.jar
-26/09/09 22:23:35 INFO SparkContext: Added file file:///root/.ivy2/jars/org.checkerframework_checker-qual-3.31.0.jar at spark://spark-master:43021/files/org.checkerframework_checker-qual-3.31.0.jar with timestamp 1788992612594
-26/09/09 22:23:35 INFO Utils: Copying /root/.ivy2/jars/org.checkerframework_checker-qual-3.31.0.jar to /tmp/spark-c724732f-e78e-486a-a2e0-d4db2b5352a2/userFiles-61edb4da-900b-45ba-ac5f-f270bf942733/org.checkerframework_checker-qual-3.31.0.jar
-26/09/09 22:23:36 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
-26/09/09 22:23:36 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.3:7077 after 73 ms (0 ms spent in bootstraps)
-26/09/09 22:23:37 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260909222337-0002
-26/09/09 22:23:37 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 37209.
-26/09/09 22:23:37 INFO NettyBlockTransferService: Server created on spark-master:37209
-26/09/09 22:23:37 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
-26/09/09 22:23:37 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, spark-master, 37209, None)
-26/09/09 22:23:37 INFO BlockManagerMasterEndpoint: Registering block manager spark-master:37209 with 366.3 MiB RAM, BlockManagerId(driver, spark-master, 37209, None)
-26/09/09 22:23:37 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, spark-master, 37209, None)
-26/09/09 22:23:37 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, spark-master, 37209, None)
-26/09/09 22:23:38 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+26/09/12 20:39:43 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/09/12 20:39:44 INFO SparkContext: Running Spark version 3.3.0
+26/09/12 20:39:44 INFO ResourceUtils: ==============================================================
+26/09/12 20:39:44 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/09/12 20:39:44 INFO ResourceUtils: ==============================================================
+26/09/12 20:39:44 INFO SparkContext: Submitted application: AIS-MultiSink-Streaming
+26/09/12 20:39:44 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1536, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/09/12 20:39:44 INFO ResourceProfile: Limiting resource is cpu
+26/09/12 20:39:44 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/09/12 20:39:45 INFO SecurityManager: Changing view acls to: root
+26/09/12 20:39:45 INFO SecurityManager: Changing modify acls to: root
+26/09/12 20:39:45 INFO SecurityManager: Changing view acls groups to: 
+26/09/12 20:39:45 INFO SecurityManager: Changing modify acls groups to: 
+26/09/12 20:39:45 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(root); groups with view permissions: Set(); users  with modify permissions: Set(root); groups with modify permissions: Set()
+26/09/12 20:39:45 INFO Utils: Successfully started service 'sparkDriver' on port 33347.
+26/09/12 20:39:45 INFO SparkEnv: Registering MapOutputTracker
+26/09/12 20:39:45 INFO SparkEnv: Registering BlockManagerMaster
+26/09/12 20:39:45 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/09/12 20:39:45 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/09/12 20:39:45 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/09/12 20:39:45 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-00670fb7-7143-4ebe-8cc3-a535e17a091a
+26/09/12 20:39:45 INFO MemoryStore: MemoryStore started with capacity 229.8 MiB
+26/09/12 20:39:45 INFO SparkEnv: Registering OutputCommitCoordinator
+26/09/12 20:39:46 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:33347/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.postgresql_postgresql-42.6.0.jar at spark://spark-master:33347/jars/org.postgresql_postgresql-42.6.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:33347/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.kafka_kafka-clients-2.8.1.jar at spark://spark-master:33347/jars/org.apache.kafka_kafka-clients-2.8.1.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/com.google.code.findbugs_jsr305-3.0.0.jar at spark://spark-master:33347/jars/com.google.code.findbugs_jsr305-3.0.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.commons_commons-pool2-2.11.1.jar at spark://spark-master:33347/jars/org.apache.commons_commons-pool2-2.11.1.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.spark-project.spark_unused-1.0.0.jar at spark://spark-master:33347/jars/org.spark-project.spark_unused-1.0.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar at spark://spark-master:33347/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.lz4_lz4-java-1.8.0.jar at spark://spark-master:33347/jars/org.lz4_lz4-java-1.8.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar at spark://spark-master:33347/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.slf4j_slf4j-api-1.7.32.jar at spark://spark-master:33347/jars/org.slf4j_slf4j-api-1.7.32.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar at spark://spark-master:33347/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/commons-logging_commons-logging-1.1.3.jar at spark://spark-master:33347/jars/commons-logging_commons-logging-1.1.3.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added JAR file:///root/.ivy2/jars/org.checkerframework_checker-qual-3.31.0.jar at spark://spark-master:33347/jars/org.checkerframework_checker-qual-3.31.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:33347/files/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.apache.spark_spark-sql-kafka-0-10_2.12-3.3.0.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.postgresql_postgresql-42.6.0.jar at spark://spark-master:33347/files/org.postgresql_postgresql-42.6.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.postgresql_postgresql-42.6.0.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.postgresql_postgresql-42.6.0.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar at spark://spark-master:33347/files/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.apache.spark_spark-token-provider-kafka-0-10_2.12-3.3.0.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.kafka_kafka-clients-2.8.1.jar at spark://spark-master:33347/files/org.apache.kafka_kafka-clients-2.8.1.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.apache.kafka_kafka-clients-2.8.1.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.apache.kafka_kafka-clients-2.8.1.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/com.google.code.findbugs_jsr305-3.0.0.jar at spark://spark-master:33347/files/com.google.code.findbugs_jsr305-3.0.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/com.google.code.findbugs_jsr305-3.0.0.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/com.google.code.findbugs_jsr305-3.0.0.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.commons_commons-pool2-2.11.1.jar at spark://spark-master:33347/files/org.apache.commons_commons-pool2-2.11.1.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.apache.commons_commons-pool2-2.11.1.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.apache.commons_commons-pool2-2.11.1.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.spark-project.spark_unused-1.0.0.jar at spark://spark-master:33347/files/org.spark-project.spark_unused-1.0.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.spark-project.spark_unused-1.0.0.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.spark-project.spark_unused-1.0.0.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar at spark://spark-master:33347/files/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.apache.hadoop_hadoop-client-runtime-3.3.2.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.lz4_lz4-java-1.8.0.jar at spark://spark-master:33347/files/org.lz4_lz4-java-1.8.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.lz4_lz4-java-1.8.0.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.lz4_lz4-java-1.8.0.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar at spark://spark-master:33347/files/org.xerial.snappy_snappy-java-1.1.8.4.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.xerial.snappy_snappy-java-1.1.8.4.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.xerial.snappy_snappy-java-1.1.8.4.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.slf4j_slf4j-api-1.7.32.jar at spark://spark-master:33347/files/org.slf4j_slf4j-api-1.7.32.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.slf4j_slf4j-api-1.7.32.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.slf4j_slf4j-api-1.7.32.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar at spark://spark-master:33347/files/org.apache.hadoop_hadoop-client-api-3.3.2.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.apache.hadoop_hadoop-client-api-3.3.2.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.apache.hadoop_hadoop-client-api-3.3.2.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/commons-logging_commons-logging-1.1.3.jar at spark://spark-master:33347/files/commons-logging_commons-logging-1.1.3.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/commons-logging_commons-logging-1.1.3.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/commons-logging_commons-logging-1.1.3.jar
+26/09/12 20:39:46 INFO SparkContext: Added file file:///root/.ivy2/jars/org.checkerframework_checker-qual-3.31.0.jar at spark://spark-master:33347/files/org.checkerframework_checker-qual-3.31.0.jar with timestamp 1789245584831
+26/09/12 20:39:46 INFO Utils: Copying /root/.ivy2/jars/org.checkerframework_checker-qual-3.31.0.jar to /tmp/spark-653b26aa-8b1c-4197-9a8a-787bc3e8dcd1/userFiles-1526ae3d-2378-4fd5-9e77-b8ebd9f8c22c/org.checkerframework_checker-qual-3.31.0.jar
+26/09/12 20:39:46 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+26/09/12 20:39:46 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.10:7077 after 41 ms (0 ms spent in bootstraps)
+26/09/12 20:39:46 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20260912203946-0000
+26/09/12 20:39:46 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 40951.
+26/09/12 20:39:46 INFO NettyBlockTransferService: Server created on spark-master:40951
+26/09/12 20:39:46 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/09/12 20:39:46 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, spark-master, 40951, None)
+26/09/12 20:39:46 INFO BlockManagerMasterEndpoint: Registering block manager spark-master:40951 with 229.8 MiB RAM, BlockManagerId(driver, spark-master, 40951, None)
+26/09/12 20:39:46 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20260912203946-0000/0 on worker-20260912203730-172.18.0.12-39301 (172.18.0.12:39301) with 3 core(s)
+26/09/12 20:39:46 INFO StandaloneSchedulerBackend: Granted executor ID app-20260912203946-0000/0 on hostPort 172.18.0.12:39301 with 3 core(s), 1536.0 MiB RAM
+26/09/12 20:39:46 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, spark-master, 40951, None)
+26/09/12 20:39:46 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, spark-master, 40951, None)
+26/09/12 20:39:46 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20260912203946-0000/0 is now RUNNING
+26/09/12 20:39:47 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
 ======================================================================
 AIS STRUCTURED STREAMING -- THREE-SINK FAN-OUT
 ======================================================================
@@ -91,27 +93,168 @@ Checkpoint root      : hdfs://namenode:9000/checkpoints/ais_streaming_v2
 Speed threshold      : 20.0 knots
 maxOffsetsPerTrigger : 500000
 maxRecordsPerFile    : 1000000
-Delta available      : False
 Trigger              : processingTime every 2s
 ======================================================================
-2026-09-09T22:23:56  INFO      py4j.java_gateway  Callback Server Starting
-2026-09-09T22:23:56  INFO      py4j.java_gateway  Socket listening on ('127.0.0.1', 34717)
-26/09/09 22:23:58 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
-26/09/09 22:23:59 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
-26/09/09 22:23:59 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
-26/09/09 22:23:59 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
-26/09/09 22:23:59 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
+2026-09-12T20:39:53  INFO      py4j.java_gateway  Callback Server Starting
+2026-09-12T20:39:53  INFO      py4j.java_gateway  Socket listening on ('127.0.0.1', 35323)
+26/09/12 20:39:54 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
+26/09/12 20:39:55 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
+26/09/12 20:39:55 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
 
 All streaming queries started. Waiting for termination...
 Live mode -- runs until manually stopped (trigger every 2s).
-26/09/09 22:24:03 WARN package: Truncated the string representation of a plan since it was too large. This behavior can be adjusted by setting 'spark.sql.debug.maxToStringFields'.
-2026-09-09T22:24:03  INFO      py4j.clientserver  Python Server ready to receive messages
-2026-09-09T22:24:03  INFO      py4j.clientserver  Received command c on object id p4
-2026-09-09T22:24:03  INFO      py4j.clientserver  Python Server ready to receive messages
-2026-09-09T22:24:03  INFO      py4j.clientserver  Received command c on object id p3
-2026-09-09T22:24:05  INFO      py4j.clientserver  Python Server ready to receive messages
-2026-09-09T22:24:05  INFO      py4j.clientserver  Received command c on object id p2
-2026-09-09T22:24:05  INFO      py4j.clientserver  Python Server ready to receive messages
-2026-09-09T22:24:05  INFO      py4j.clientserver  Received command c on object id p0
-2026-09-09T22:24:05  INFO      py4j.clientserver  Python Server ready to receive messages
-2026-09-09T22:24:05  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:39:58 WARN package: Truncated the string representation of a plan since it was too large. This behavior can be adjusted by setting 'spark.sql.debug.maxToStringFields'.
+2026-09-12T20:39:58  INFO      py4j.clientserver  Python Server ready to receive messages
+2026-09-12T20:39:58  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:39:58  INFO      py4j.clientserver  Python Server ready to receive messages
+2026-09-12T20:39:58  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:39:59  INFO      py4j.clientserver  Python Server ready to receive messages
+2026-09-12T20:39:59  INFO      py4j.clientserver  Received command c on object id p0
+26/09/12 20:40:10 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 14441 milliseconds
+2026-09-12T20:40:10  INFO      py4j.clientserver  Received command c on object id p2
+26/09/12 20:40:24 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 14666 milliseconds
+2026-09-12T20:40:25  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:40:30  INFO      ais_streaming  Sink A (PostGIS) batch 0: upserting 16323 rows.
+2026-09-12T20:40:33  INFO      ais_streaming  Rejects sink batch 0: wrote 162 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:40:33 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 38881 milliseconds
+2026-09-12T20:40:34  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:40:35 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 11183 milliseconds
+2026-09-12T20:40:36  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:40:52  INFO      ais_streaming  Sink A (PostGIS) batch 0: upsert committed successfully.
+26/09/12 20:40:55 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 19188 milliseconds
+2026-09-12T20:40:55  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:40:59  INFO      ais_streaming  Sink B (Alerts) batch 0: 3179 violation(s) (SOG > 20.0 kts).
+2026-09-12T20:40:59  INFO      ais_streaming  Rejects sink batch 1: wrote 186 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:40:59 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 25972 milliseconds
+2026-09-12T20:41:00  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:41:01  INFO      ais_streaming  Sink B (Kafka alerts) batch 0: published 3179 alerts to vessel_speed_alerts.
+26/09/12 20:41:04 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 8959 milliseconds
+2026-09-12T20:41:04  INFO      py4j.clientserver  Received command c on object id p2
+26/09/12 20:41:10 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 6225 milliseconds
+2026-09-12T20:41:10  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:41:11  INFO      ais_streaming  Sink B (PostGIS alerts) batch 0: persisted 3179 alerts to PostGIS vessel_speed_alerts.
+2026-09-12T20:41:17  INFO      ais_streaming  Rejects sink batch 2: wrote 186 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:41:17 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 17683 milliseconds
+2026-09-12T20:41:18  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:41:18  INFO      ais_streaming  Sink C (HDFS archive) batch 0: archiving 499580 rows.
+26/09/12 20:41:21 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 10760 milliseconds
+2026-09-12T20:41:21  INFO      py4j.clientserver  Received command c on object id p2
+26/09/12 20:41:29 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 8862 milliseconds
+2026-09-12T20:41:30  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:41:35  INFO      ais_streaming  Rejects sink batch 3: wrote 182 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:41:35 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 17532 milliseconds
+2026-09-12T20:41:35  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:41:36  INFO      ais_streaming  Sink C (HDFS archive) batch 0: wrote 499580 rows to hdfs://namenode:9000/raw/ais_historical.
+26/09/12 20:41:37 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 102065 milliseconds
+2026-09-12T20:41:37  INFO      py4j.clientserver  Received command c on object id p0
+26/09/12 20:41:38 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 8831 milliseconds
+2026-09-12T20:41:38  INFO      py4j.clientserver  Received command c on object id p2
+26/09/12 20:41:50 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 11445 milliseconds
+2026-09-12T20:41:50  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:41:51  INFO      ais_streaming  Sink A (PostGIS) batch 1: upserting 52 rows.
+2026-09-12T20:41:55  INFO      ais_streaming  Rejects sink batch 4: wrote 196 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:41:55 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 20785 milliseconds
+2026-09-12T20:41:56  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:41:57 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 7535 milliseconds
+2026-09-12T20:41:57  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:41:59  INFO      ais_streaming  Sink A (PostGIS) batch 1: upsert committed successfully.
+2026-09-12T20:42:05  INFO      ais_streaming  Sink B (Alerts) batch 1: 1 violation(s) (SOG > 20.0 kts).
+26/09/12 20:42:07 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 10151 milliseconds
+2026-09-12T20:42:07  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:42:11  INFO      ais_streaming  Sink B (Kafka alerts) batch 1: published 1 alerts to vessel_speed_alerts.
+2026-09-12T20:42:11  INFO      ais_streaming  Rejects sink batch 5: wrote 184 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:42:11 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 15827 milliseconds
+2026-09-12T20:42:12  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:42:13  INFO      ais_streaming  Sink B (PostGIS alerts) batch 1: persisted 1 alerts to PostGIS vessel_speed_alerts.
+26/09/12 20:42:14 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 6357 milliseconds
+2026-09-12T20:42:14  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:42:19  INFO      ais_streaming  Sink C (HDFS archive) batch 1: archiving 61 rows.
+26/09/12 20:42:22 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 8692 milliseconds
+2026-09-12T20:42:23  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:42:27  INFO      ais_streaming  Rejects sink batch 6: wrote 205 rows to hdfs://namenode:9000/rejected/ais_streaming.
+2026-09-12T20:42:27  INFO      ais_streaming  Sink C (HDFS archive) batch 1: wrote 61 rows to hdfs://namenode:9000/raw/ais_historical.
+26/09/12 20:42:27 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 15770 milliseconds
+2026-09-12T20:42:27  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:42:27 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 50810 milliseconds
+2026-09-12T20:42:28  INFO      py4j.clientserver  Received command c on object id p0
+26/09/12 20:42:30 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 7674 milliseconds
+2026-09-12T20:42:31  INFO      py4j.clientserver  Received command c on object id p2
+26/09/12 20:42:41 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 10726 milliseconds
+2026-09-12T20:42:41  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:42:43  INFO      ais_streaming  Sink A (PostGIS) batch 2: no rows with valid LAT/LON, skipping.
+2026-09-12T20:42:47  INFO      ais_streaming  Rejects sink batch 7: wrote 187 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:42:47 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 19566 milliseconds
+2026-09-12T20:42:47  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:42:48  INFO      ais_streaming  Sink B (Alerts) batch 2: no violations (SOG > 20.0 kts), skipping.
+26/09/12 20:42:50 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 9547 milliseconds
+2026-09-12T20:42:50  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:42:55  INFO      ais_streaming  Sink C (HDFS archive) batch 2: empty batch, skipping.
+26/09/12 20:42:55 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 27904 milliseconds
+26/09/12 20:42:56 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 5404 milliseconds
+2026-09-12T20:42:56  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:42:56  INFO      py4j.clientserver  Received command c on object id p0
+2026-09-12T20:43:01  INFO      ais_streaming  Rejects sink batch 8: wrote 186 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:43:02 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 15245 milliseconds
+2026-09-12T20:43:03  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:43:07 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 10946 milliseconds
+2026-09-12T20:43:07  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:43:12  INFO      ais_streaming  Sink A (PostGIS) batch 3: upserting 55 rows.
+26/09/12 20:43:16 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 9308 milliseconds
+2026-09-12T20:43:16  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:43:18  INFO      ais_streaming  Sink A (PostGIS) batch 3: upsert committed successfully.
+2026-09-12T20:43:22  INFO      ais_streaming  Rejects sink batch 9: wrote 182 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:43:22 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 20254 milliseconds
+2026-09-12T20:43:23  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:43:23  INFO      ais_streaming  Sink B (Alerts) batch 3: 1 violation(s) (SOG > 20.0 kts).
+26/09/12 20:43:26 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 9512 milliseconds
+2026-09-12T20:43:26  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:43:29  INFO      ais_streaming  Sink B (Kafka alerts) batch 3: published 1 alerts to vessel_speed_alerts.
+2026-09-12T20:43:31  INFO      ais_streaming  Sink B (PostGIS alerts) batch 3: persisted 1 alerts to PostGIS vessel_speed_alerts.
+26/09/12 20:43:31 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 5587 milliseconds
+2026-09-12T20:43:32  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:43:36  INFO      ais_streaming  Sink C (HDFS archive) batch 3: archiving 58 rows.
+2026-09-12T20:43:37  INFO      ais_streaming  Rejects sink batch 10: wrote 197 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:43:37 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 14439 milliseconds
+2026-09-12T20:43:37  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:43:39 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 7675 milliseconds
+2026-09-12T20:43:39  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:43:44  INFO      ais_streaming  Sink C (HDFS archive) batch 3: wrote 58 rows to hdfs://namenode:9000/raw/ais_historical.
+26/09/12 20:43:44 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 48971 milliseconds
+2026-09-12T20:43:45  INFO      py4j.clientserver  Received command c on object id p0
+26/09/12 20:43:47 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 8608 milliseconds
+2026-09-12T20:43:48  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:43:51  INFO      ais_streaming  Rejects sink batch 11: wrote 197 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:43:52 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 15044 milliseconds
+2026-09-12T20:43:52  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:43:57 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 10054 milliseconds
+2026-09-12T20:43:58  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:43:59  INFO      ais_streaming  Sink A (PostGIS) batch 4: upserting 21 rows.
+26/09/12 20:44:04 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 6933 milliseconds
+2026-09-12T20:44:05  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:44:06  INFO      ais_streaming  Sink A (PostGIS) batch 4: upsert committed successfully.
+2026-09-12T20:44:10  INFO      ais_streaming  Rejects sink batch 12: wrote 180 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:44:10 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 18716 milliseconds
+2026-09-12T20:44:11  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:44:11  INFO      ais_streaming  Sink B (Alerts) batch 4: no violations (SOG > 20.0 kts), skipping.
+26/09/12 20:44:11 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 7068 milliseconds
+2026-09-12T20:44:12  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:44:18  INFO      ais_streaming  Sink C (HDFS archive) batch 4: archiving 23 rows.
+26/09/12 20:44:20 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 8679 milliseconds
+2026-09-12T20:44:21  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:44:23  INFO      ais_streaming  Rejects sink batch 13: wrote 176 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:44:23 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 13162 milliseconds
+2026-09-12T20:44:24  INFO      py4j.clientserver  Received command c on object id p1
+2026-09-12T20:44:25  INFO      ais_streaming  Sink C (HDFS archive) batch 4: wrote 23 rows to hdfs://namenode:9000/raw/ais_historical.
+26/09/12 20:44:25 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 5077 milliseconds
+26/09/12 20:44:26 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 41327 milliseconds
+2026-09-12T20:44:26  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:44:26  INFO      py4j.clientserver  Received command c on object id p0
+26/09/12 20:44:35 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 9726 milliseconds
+2026-09-12T20:44:35  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:44:39  INFO      ais_streaming  Sink A (PostGIS) batch 5: upserting 77 rows.
+2026-09-12T20:44:41  INFO      ais_streaming  Rejects sink batch 14: wrote 178 rows to hdfs://namenode:9000/rejected/ais_streaming.
+26/09/12 20:44:41 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 17832 milliseconds
+2026-09-12T20:44:42  INFO      py4j.clientserver  Received command c on object id p1
+26/09/12 20:44:43 WARN ProcessingTimeExecutor: Current batch is falling behind. The trigger interval is 2000 milliseconds, but spent 7750 milliseconds
+2026-09-12T20:44:43  INFO      py4j.clientserver  Received command c on object id p2
+2026-09-12T20:44:44  INFO      ais_streaming  Sink A (PostGIS) batch 5: upsert committed successfully.

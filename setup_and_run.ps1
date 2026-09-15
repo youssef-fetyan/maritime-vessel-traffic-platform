@@ -93,17 +93,23 @@ if ($hdfsReady) {
     Write-Host " [WARNING] Could not toggle HDFS SafeMode automatically. Run manually: docker compose exec namenode hdfs dfsadmin -safemode leave" -ForegroundColor DarkYellow
 }
 
-# 5. Ensure Python dependencies (numpy, pg8000) are installed in spark-master and spark-worker
-Write-Host "`n[5/5] Ensuring Python dependencies (numpy, pg8000) are ready in Spark containers..." -ForegroundColor Yellow
-Write-Host " -> Checking & ensuring dependencies in spark-master..." -NoNewline
-docker compose exec -T spark-master sh -c 'python3 -c "import numpy" 2>/dev/null || (echo "https://dl-cdn.alpinelinux.org/alpine/v3.10/main" > /etc/apk/repositories && echo "https://dl-cdn.alpinelinux.org/alpine/v3.10/community" >> /etc/apk/repositories && apk update -q && apk add --no-cache py3-numpy -q)' *>$null
-docker compose exec -T spark-master pip3 install --no-cache-dir --disable-pip-version-check -q pg8000 *>$null
-Write-Host " DONE" -ForegroundColor Green
+# 5. Verify Python dependencies (numpy, pg8000) are ready in Spark containers
+Write-Host "`n[5/5] Verifying Python dependencies (numpy, pg8000) in Spark containers..." -ForegroundColor Yellow
+Write-Host " -> Checking dependencies in spark-master..." -NoNewline
+docker compose exec -T spark-master python3 -c "import numpy, pg8000" *>$null
+if ($LASTEXITCODE -eq 0) {
+    Write-Host " READY" -ForegroundColor Green
+} else {
+    Write-Host " WARNING: Dependencies missing. Rebuild via: docker compose build spark-master spark-worker" -ForegroundColor DarkYellow
+}
 
-Write-Host " -> Checking & ensuring dependencies in spark-worker..." -NoNewline
-docker compose exec -T spark-worker sh -c 'python3 -c "import numpy" 2>/dev/null || (echo "https://dl-cdn.alpinelinux.org/alpine/v3.10/main" > /etc/apk/repositories && echo "https://dl-cdn.alpinelinux.org/alpine/v3.10/community" >> /etc/apk/repositories && apk update -q && apk add --no-cache py3-numpy -q)' *>$null
-docker compose exec -T spark-worker pip3 install --no-cache-dir --disable-pip-version-check -q pg8000 *>$null
-Write-Host " DONE" -ForegroundColor Green
+Write-Host " -> Checking dependencies in spark-worker..." -NoNewline
+docker compose exec -T spark-worker python3 -c "import numpy, pg8000" *>$null
+if ($LASTEXITCODE -eq 0) {
+    Write-Host " READY" -ForegroundColor Green
+} else {
+    Write-Host " WARNING: Dependencies missing. Rebuild via: docker compose build spark-master spark-worker" -ForegroundColor DarkYellow
+}
 
 # 6. Final Instructions
 Write-Host "`n==========================================================================" -ForegroundColor Cyan
@@ -116,6 +122,7 @@ Write-Host " Spark Master:    http://localhost:8080"
 Write-Host " Spark Worker:    http://localhost:8081"
 Write-Host " HDFS NameNode:   http://localhost:9870"
 Write-Host " Apache Superset: http://localhost:8089 (admin / admin)"
+Write-Host " Zeppelin:        http://localhost:8091"
 Write-Host " Jupyter Lab:     http://localhost:8888 (token: lab)"
 
 Write-Host "`nNEXT STEPS: RUN THE STREAMING PIPELINE IN TWO SEPARATE TERMINALS" -ForegroundColor Yellow
@@ -125,8 +132,9 @@ Write-Host 'docker compose exec spark-master /spark/bin/spark-submit \' -Foregro
 Write-Host '  --master spark://spark-master:7077 \' -ForegroundColor Cyan
 Write-Host '  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,org.postgresql:postgresql:42.6.0 \' -ForegroundColor Cyan
 Write-Host '  --conf spark.sql.shuffle.partitions=8 \' -ForegroundColor Cyan
-Write-Host '  --conf spark.executor.memory=2g \' -ForegroundColor Cyan
-Write-Host '  --conf spark.driver.memory=1g \' -ForegroundColor Cyan
+# worker=6G; streaming=1.5G executor + 0.75G driver, batch=1.5G executor + 0.75G driver, leaving headroom for OS/JVM overhead — both can run concurrently
+Write-Host '  --conf spark.executor.memory=1536m \' -ForegroundColor Cyan
+Write-Host '  --conf spark.driver.memory=768m \' -ForegroundColor Cyan
 Write-Host '  /opt/spark-apps/streaming_maritime_processor.py' -ForegroundColor Cyan
 
 Write-Host "`n--- TERMINAL 2: RUN AIS HISTORICAL REPLAY PRODUCER ---" -ForegroundColor White

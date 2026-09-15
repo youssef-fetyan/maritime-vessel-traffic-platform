@@ -48,6 +48,36 @@ CREATE TABLE IF NOT EXISTS vessel_speed_alerts (
     threshold_knots NUMERIC DEFAULT 20.0
 );
 
+-- ============================================================================
+-- Staging Tables for Zero-Downtime Atomic Batch Upserts
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS stg_port_dwell_times (
+    kpi_date DATE,
+    mmsi BIGINT,
+    port_id VARCHAR,
+    entry_ts TIMESTAMP,
+    exit_ts TIMESTAMP,
+    dwell_minutes NUMERIC
+);
+
+CREATE TABLE IF NOT EXISTS stg_fleet_daily_kpis (
+    kpi_date DATE,
+    vessel_type VARCHAR,
+    avg_sog NUMERIC,
+    min_sog NUMERIC,
+    max_sog NUMERIC,
+    stddev_sog NUMERIC,
+    ping_count BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS stg_route_density_grid (
+    kpi_date DATE,
+    grid_lat NUMERIC,
+    grid_lon NUMERIC,
+    ping_count BIGINT
+);
+
 CREATE INDEX IF NOT EXISTS idx_dwell_date ON port_dwell_times(kpi_date);
 CREATE INDEX IF NOT EXISTS idx_dwell_mmsi ON port_dwell_times(mmsi);
 CREATE INDEX IF NOT EXISTS idx_kpi_date ON fleet_daily_kpis(kpi_date);

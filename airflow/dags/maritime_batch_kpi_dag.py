@@ -17,7 +17,7 @@ import os
 import subprocess
 
 from airflow import DAG
-from airflow.exceptions import AirflowFailException
+from airflow.exceptions import AirflowException, AirflowFailException, AirflowNotFoundException
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
@@ -52,7 +52,7 @@ def verify_postgres_rows_written(ds: str, **context) -> None:
         from airflow.providers.postgres.hooks.postgres import PostgresHook
         hook = PostgresHook(postgres_conn_id="maritime_postgis")
         conn = hook.get_conn()
-    except Exception:
+    except (ImportError, AirflowNotFoundException, AirflowException):
         import psycopg2
         conn = psycopg2.connect(
             host=os.environ.get("POSTGIS_HOST", "postgis"),
@@ -80,7 +80,7 @@ def verify_postgres_rows_written(ds: str, **context) -> None:
         grid_count = cur.fetchone()[0]
         log.info("route_density_grid row count for %s: %d", ds, grid_count)
 
-        # Check vessel_behavior_clusters (Layer 5 MLlib / Mahout clustering)
+        # Check vessel_behavior_clusters (Layer 5 PySpark MLlib clustering)
         cur.execute("SELECT COUNT(*) FROM vessel_behavior_clusters WHERE kpi_date = %s", (ds,))
         cluster_count = cur.fetchone()[0]
         log.info("vessel_behavior_clusters row count for %s: %d", ds, cluster_count)
@@ -162,19 +162,20 @@ with DAG(
     dag_id="maritime_batch_kpi_pipeline",
     description="Daily batch aggregation pipeline computing vessel dwell times, speed profiles, and traffic density",
     default_args=default_args,
-    schedule_interval="@daily",
+    schedule_interval=None,
     start_date=datetime(2024, 12, 25),
     catchup=False,
+    max_active_runs=2,
     tags=["maritime", "batch", "kpi", "spark", "postgis"],
 ) as dag:
 
-    # 1. Verify HDFS input partition exists before launching Spark
+    # 1. Verify HDFS input partition exists and contains parquet data before launching Spark
     check_hdfs_partition_exists = BashOperator(
         task_id="check_hdfs_partition_exists",
         bash_command=(
-            "docker exec namenode hdfs dfs -test -d /raw/ais_historical/date={{ ds }} || "
-            "(echo 'CRITICAL: HDFS partition /raw/ais_historical/date={{ ds }} not found! "
-            "Streaming pipeline has not archived data for this date.' && exit 1)"
+            'docker exec namenode hdfs dfs -ls /raw/ais_historical/date={{ ds }} 2>/dev/null | grep -q "\\.parquet" || '
+            '(echo "CRITICAL: HDFS partition /raw/ais_historical/date={{ ds }} not found or contains no parquet files! '
+            'Streaming pipeline has not archived data for this date." && exit 1)'
         ),
     )
 
@@ -182,31 +183,41 @@ with DAG(
     run_batch_kpi_job = BashOperator(
         task_id="run_batch_kpi_job",
         bash_command=(
-            "docker exec -e PYSPARK_PYTHON=python3 -e PYSPARK_DRIVER_PYTHON=python3 spark-master /spark/bin/spark-submit "
+            "docker exec -e PYSPARK_PYTHON=python3 -e PYSPARK_DRIVER_PYTHON=python3 "
+            "-e POSTGIS_HOST -e POSTGIS_PORT -e POSTGIS_DB -e POSTGIS_USER -e POSTGIS_PASSWORD "
+            "spark-master /spark/bin/spark-submit "
             "--master spark://spark-master:7077 "
             "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,org.postgresql:postgresql:42.6.0 "
+            "--py-files /opt/spark-apps/common.zip "
             "--conf spark.pyspark.python=python3 "
             "--conf spark.pyspark.driver.python=python3 "
             "--conf spark.sql.shuffle.partitions=8 "
-            "--conf spark.executor.memory=2g "
-            "--conf spark.driver.memory=1g "
+            # worker=6G, 6 cores; streaming=1.5G/3 cores, batch=1.5G/3 cores — both can run concurrently
+            "--conf spark.executor.memory=1536m "
+            "--conf spark.driver.memory=768m "
+            "--conf spark.cores.max=3 "
             "/opt/spark-apps/batch_port_kpi_processor.py --exec-date {{ ds }}"
         ),
     )
 
-    # 3. Submit the PySpark MLlib / Mahout Vessel Behavior Clustering Job
-    run_mahout_clustering_job = BashOperator(
-        task_id="run_mahout_clustering_job",
+    # 3. Submit the PySpark MLlib Vessel Behavior Clustering Job
+    run_vessel_clustering_job = BashOperator(
+        task_id="run_vessel_clustering_job",
         bash_command=(
-            "docker exec -e PYSPARK_PYTHON=python3 -e PYSPARK_DRIVER_PYTHON=python3 spark-master /spark/bin/spark-submit "
+            "docker exec -e PYSPARK_PYTHON=python3 -e PYSPARK_DRIVER_PYTHON=python3 "
+            "-e POSTGIS_HOST -e POSTGIS_PORT -e POSTGIS_DB -e POSTGIS_USER -e POSTGIS_PASSWORD "
+            "spark-master /spark/bin/spark-submit "
             "--master spark://spark-master:7077 "
             "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,org.postgresql:postgresql:42.6.0 "
+            "--py-files /opt/spark-apps/common.zip "
             "--conf spark.pyspark.python=python3 "
             "--conf spark.pyspark.driver.python=python3 "
             "--conf spark.sql.shuffle.partitions=8 "
-            "--conf spark.executor.memory=2g "
-            "--conf spark.driver.memory=1g "
-            "/opt/spark-apps/mahout/spark_mahout_clustering.py --exec-date {{ ds }} --k 5 --anomaly-threshold-pct 95"
+            # worker=6G, 6 cores; streaming=1.5G/3 cores, batch=1.5G/3 cores — both can run concurrently
+            "--conf spark.executor.memory=1536m "
+            "--conf spark.driver.memory=768m "
+            "--conf spark.cores.max=3 "
+            "/opt/spark-apps/ml/vessel_clustering.py --exec-date {{ ds }} --k 5 --anomaly-threshold-pct 95"
         ),
     )
 
@@ -226,7 +237,7 @@ with DAG(
     (
         check_hdfs_partition_exists
         >> run_batch_kpi_job
-        >> run_mahout_clustering_job
+        >> run_vessel_clustering_job
         >> verify_rows
         >> health_check
     )

@@ -1,6 +1,7 @@
 pyspark==3.3.0
 hdfs==2.7.3
 kafka-python==2.0.2
+# Pre-installed provider for planned migration from BashOperator+docker exec to SparkSubmitOperator/Livy (see README)
 apache-airflow-providers-apache-spark==4.9.0
 psycopg2-binary==2.9.9
 pandas==2.2.2

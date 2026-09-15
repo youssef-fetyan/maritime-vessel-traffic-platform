@@ -47,3 +47,6 @@ Thumbs.db
 
 # Airflow local logs
 airflow/logs/
+
+# Notebooks vendored dependencies (install via notebooks/requirements.txt instead)
+notebooks/libs/

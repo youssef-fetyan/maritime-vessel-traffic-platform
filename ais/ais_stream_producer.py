@@ -1,32 +1,44 @@
 """
-HISTORICAL AIS -> KAFKA PRODUCER (fast version)
-=================================================
+Historical AIS CSV → Kafka Producer
+=====================================
 
-Same behavior as the original script, but rewritten for throughput:
+Ingestion mode: **CSV replay** (historical data only).
 
-  1. One process per CSV file (up to CSV_WORKERS at a time), so all
-     physical cores get used instead of just one.
-  2. orjson instead of json for serialization (falls back to json if
-     orjson isn't installed).
-  3. csv.reader + zip() instead of csv.DictReader (avoids building an
-     intermediate dict per row twice).
-  4. No forced flush() after every file -- each worker flushes once,
-     at the end of its own file, so files can pipeline instead of
-     stalling on a full sync point.
+This producer reads NOAA MarineCadastre AIS CSV archives
+(AIS_2024_12_25.csv … AIS_2024_12_31.csv) from AIS_DATA_DIR and publishes
+every row to a Kafka topic in the same flat-dict schema that the Spark
+Structured Streaming job (streaming_maritime_processor.py) expects.
 
-Install the optional speed dependency:
-    pip install orjson --break-system-packages
+There is intentionally no live WebSocket connection.  A future upgrade to
+real-time ingestion via the aisstream.io WebSocket API would replace this
+file; the AISSTREAM_API_KEY environment variable is already plumbed in
+.env and docker-compose.yml as a placeholder for that upgrade.
 
-Usage is identical to the original -- same env vars:
-    KAFKA_BOOTSTRAP, KAFKA_TOPIC, AIS_DATA_DIR, MAX_ROWS
-plus one new one:
-    CSV_WORKERS   (default: number of CPU cores, capped at number of files)
+Performance notes
+-----------------
+* One worker process per file (up to CSV_WORKERS at a time) so all
+  physical cores are used.
+* orjson is used when available (falls back to stdlib json silently).
+* csv.reader + zip() avoids building a duplicate intermediate dict per row.
+* Each worker flushes once at the end of its file instead of after every row.
+
+Environment variables
+---------------------
+KAFKA_BOOTSTRAP   Kafka broker address          (default: kafka:9092)
+KAFKA_TOPIC       Destination topic             (default: raw_ais_positions)
+AIS_DATA_DIR      Directory containing CSV files (default: /data/historical)
+MAX_ROWS          Max rows per file, 0 = all   (default: 0)
+CSV_WORKERS       Parallel file workers         (default: min(files, CPUs))
+
+Optional speed dependency:
+    pip install orjson
 """
 
 import csv
 import json
 import multiprocessing as mp
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -221,6 +233,30 @@ def main():
     print("\n" + "=" * 60)
     print(f"ALL FILES FINISHED | total={total:,} | rate={rate:,.0f} rows/sec")
     print("=" * 60)
+
+    if total == 0:
+        missing_files = []
+        empty_files = []
+        for filename in CSV_FILES:
+            filepath = AIS_DATA_DIR / filename
+            if not filepath.exists():
+                missing_files.append(filename)
+            elif filepath.stat().st_size == 0:
+                empty_files.append(filename)
+            else:
+                empty_files.append(f"{filename} (no valid rows parsed)")
+
+        print("\n" + "!" * 60, file=sys.stderr)
+        print("ERROR: Zero rows produced across all expected AIS CSV files!", file=sys.stderr)
+        print(f"Target directory: {AIS_DATA_DIR}", file=sys.stderr)
+        if missing_files:
+            print(f"Missing files ({len(missing_files)}/{len(CSV_FILES)}): {', '.join(missing_files)}", file=sys.stderr)
+        if empty_files:
+            print(f"Empty/unparseable files: {', '.join(empty_files)}", file=sys.stderr)
+        print("Please download the NOAA Marine Cadastre AIS datasets for 25-31 Dec 2024", file=sys.stderr)
+        print("and place the unzipped CSVs in data/historical/. See README.md for details.", file=sys.stderr)
+        print("!" * 60 + "\n", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

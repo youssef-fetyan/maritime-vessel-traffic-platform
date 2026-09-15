@@ -53,14 +53,15 @@ POSTGIS_PORT = os.environ.get("POSTGIS_PORT", "5432")
 POSTGIS_DB = os.environ.get("POSTGIS_DB", "maritime")
 POSTGIS_USER = os.environ.get("POSTGIS_USER", "maritime")
 POSTGIS_PASSWORD = os.environ.get("POSTGIS_PASSWORD", "maritime")
+SUPERSET_ADMIN_USER = os.environ.get("SUPERSET_ADMIN_USER", "admin")
 
 SQLALCHEMY_URI = f"postgresql+psycopg2://{POSTGIS_USER}:{POSTGIS_PASSWORD}@{POSTGIS_HOST}:{POSTGIS_PORT}/{POSTGIS_DB}"
 DB_NAME = "Maritime PostGIS"
 
-# Free public basemap provider requiring zero API keys (CartoDB Positron)
+# Free public basemap provider requiring zero API keys (Carto Voyager raster tiles)
 MAPBOX_STYLE = os.environ.get(
     "MAPBOX_STYLE",
-    "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    "/static/assets/basemaps/carto_voyager.json",
 )
 
 
@@ -243,6 +244,9 @@ def setup_dashboards(datasets: dict[str, SqlaTable], owners: list) -> None:
     # =========================================================================
 
     # Headline Big Numbers
+    # Note: AI Behavioral Anomalies and Speeding Violations below track cumulative totals
+    # across the 7-day replay dataset for demo purposes. For continuous 24/7 live mode (RUN_MODE=live),
+    # add "time_range": "Last day" (or custom rolling filter) to params to bound them to a moving window.
     kpi_active_vessels = get_or_create_slice(
         slice_name="Active Tracked Vessels",
         viz_type="big_number_total",
@@ -532,7 +536,7 @@ def setup_dashboards(datasets: dict[str, SqlaTable], owners: list) -> None:
 
 def main():
     print("[Superset-Setup] Starting Apache Superset automated provisioning engine...", flush=True)
-    admin_user = security_manager.find_user(username="admin")
+    admin_user = security_manager.find_user(username=SUPERSET_ADMIN_USER)
     owners = [admin_user] if admin_user else []
     print(f"[Superset-Setup] Configured admin ownership: {admin_user}", flush=True)
 

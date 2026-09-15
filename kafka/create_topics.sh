@@ -10,6 +10,7 @@ KAFKA_BIN="/opt/kafka/bin"
 declare -A TOPICS=(
   ["raw_ais_positions"]=3
   ["vessel_speed_alerts"]=1
+  # Provisioned for future geofencing/collision-risk features; not currently written to by any pipeline component
   ["port_geofence_events"]=1
   ["collision_risk_telemetry"]=1
 )

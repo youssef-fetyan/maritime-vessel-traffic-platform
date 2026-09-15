@@ -35,3 +35,22 @@ ON CONFLICT (port_id) DO UPDATE SET
     port_name = EXCLUDED.port_name,
     geom = EXCLUDED.geom,
     radius_nm = EXCLUDED.radius_nm;
+
+-- ----------------------------------------------------------------------------
+-- Link geofence_boundaries to port_reference
+-- ----------------------------------------------------------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_geofence_port_ref'
+    ) THEN
+        ALTER TABLE geofence_boundaries
+            ADD CONSTRAINT fk_geofence_port_ref
+            FOREIGN KEY (port_ref_id) REFERENCES port_reference(port_id);
+    END IF;
+END $$;
+
+UPDATE geofence_boundaries SET port_ref_id = 'EG_PSD' WHERE port_name = 'Port Said';
+UPDATE geofence_boundaries SET port_ref_id = 'EG_SUZ' WHERE port_name = 'Suez Port';
+UPDATE geofence_boundaries SET port_ref_id = 'EG_ALY' WHERE port_name = 'Alexandria Port';
+

@@ -70,15 +70,142 @@ JDBC_PROPERTIES = {
 }
 
 
-def get_pg_connection():
-    """Create a pg8000 DB connection for pre-write deletions / DDL."""
-    return pg_driver.connect(
-        host=POSTGIS_HOST,
-        port=POSTGIS_PORT,
-        database=POSTGIS_DB,
-        user=POSTGIS_USER,
-        password=POSTGIS_PASSWORD,
+def get_pg_connection(retries: int = 4, delay: float = 2.0):
+    """Create a pg8000 DB connection with retries for transient DNS/connection blips."""
+    for attempt in range(1, retries + 1):
+        try:
+            return pg_driver.connect(
+                host=POSTGIS_HOST,
+                port=POSTGIS_PORT,
+                database=POSTGIS_DB,
+                user=POSTGIS_USER,
+                password=POSTGIS_PASSWORD,
+            )
+        except Exception as exc:
+            if attempt == retries:
+                log.error("All %d connection attempts to PostGIS failed: %s", retries, exc)
+                raise
+            import time
+            log.warning("PostGIS connection attempt %d failed (%s); retrying in %s s...", attempt, exc, delay)
+            time.sleep(delay)
+
+
+def delete_alerts_by_date(exec_date: str) -> None:
+    """Execute scoped DELETE to clean existing alerts for partition date."""
+    log.info("Deleting existing speed alerts for date '%s'", exec_date)
+    conn = None
+    cur = None
+    try:
+        conn = get_pg_connection()
+        cur = conn.cursor()
+        query = "DELETE FROM vessel_speed_alerts WHERE DATE(detected_at) = %s"
+        cur.execute(query, (exec_date,))
+        conn.commit()
+        log.info("Deleted %d existing speed alerts", cur.rowcount)
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        log.error("Failed to delete speed alerts for %s: %s", exec_date, exc)
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+
+def upsert_via_staging(
+    df: DataFrame,
+    target_table: str,
+    staging_table: str,
+    create_staging_ddl: str,
+    columns: list[str],
+    conflict_cols: list[str],
+    update_cols: list[str],
+    exec_date: str = "",
+) -> None:
+    """
+    Writes DataFrame to a staging table via JDBC, then performs an atomic
+    INSERT ... ON CONFLICT DO UPDATE into the target table via pg8000.
+    Ensures zero downtime and complete rollback protection for analytical tables.
+    The staging table name is scoped by execution date to prevent race conditions during concurrent runs.
+    """
+    scoped_staging = f"{staging_table}_{exec_date.replace('-', '')}" if exec_date else staging_table
+    create_staging_ddl_scoped = create_staging_ddl.replace(staging_table, scoped_staging)
+    log.info("Upserting into %s via scoped staging table %s...", target_table, scoped_staging)
+    conn = None
+    cur = None
+    try:
+        conn = get_pg_connection()
+        cur = conn.cursor()
+        cur.execute(create_staging_ddl_scoped)
+        cur.execute(f"TRUNCATE TABLE {scoped_staging}")
+        conn.commit()
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        log.error("Failed initializing staging table %s: %s", scoped_staging, exc)
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+    # Write Spark DataFrame to staging table via JDBC
+    (
+        df.write
+        .format("jdbc")
+        .option("url", JDBC_URL)
+        .option("dbtable", scoped_staging)
+        .options(**JDBC_PROPERTIES)
+        .mode("append")
+        .save()
     )
+
+    # Perform atomic upsert from staging to target table
+    col_str = ", ".join(columns)
+    conflict_str = ", ".join(conflict_cols)
+    update_str = ", ".join([f"{col} = EXCLUDED.{col}" for col in update_cols])
+    upsert_sql = f"""
+        INSERT INTO {target_table} ({col_str})
+        SELECT {col_str} FROM {scoped_staging}
+        ON CONFLICT ({conflict_str})
+        DO UPDATE SET {update_str};
+    """
+    try:
+        conn = get_pg_connection()
+        cur = conn.cursor()
+        cur.execute(upsert_sql)
+        row_count = cur.rowcount
+        conn.commit()
+        log.info("Successfully upserted %d rows into %s via %s.", row_count, target_table, scoped_staging)
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        log.error("Failed executing upsert from %s to %s: %s", scoped_staging, target_table, exc)
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+        # Clean up temporary scoped staging table
+        cleanup_conn = None
+        cleanup_cur = None
+        try:
+            cleanup_conn = get_pg_connection()
+            cleanup_cur = cleanup_conn.cursor()
+            cleanup_cur.execute(f"DROP TABLE IF EXISTS {scoped_staging}")
+            cleanup_conn.commit()
+            log.info("Dropped temporary staging table %s", scoped_staging)
+        except Exception as drop_err:
+            log.warning("Could not drop staging table %s: %s", scoped_staging, drop_err)
+        finally:
+            if cleanup_cur:
+                cleanup_cur.close()
+            if cleanup_conn:
+                cleanup_conn.close()
 
 
 def delete_partition_date(table_name: str, date_col: str, exec_date: str) -> None:
@@ -157,7 +284,9 @@ def compute_port_dwell_times(
     # Pre-filter using coarse bounding box (1 deg lat ~ 60 NM)
     # Allows fast exclusion before trigonometric calculations
     lat_deg_margin = (F.col("radius_nm") / 60.0) * 1.2
-    lon_deg_margin = (F.col("radius_nm") / 45.0) * 1.2
+    # Dynamically scale longitude margin by cos(latitude), clamping divisor to avoid pole singularities
+    cos_lat = F.greatest(F.cos(F.radians(F.abs(F.col("port_lat")))), F.lit(0.01))
+    lon_deg_margin = (F.col("radius_nm") / (60.0 * cos_lat)) * 1.2
 
     in_bbox = (
         (F.abs(F.col("LAT") - F.col("port_lat")) <= lat_deg_margin)
@@ -213,10 +342,30 @@ def compute_port_dwell_times(
         2,
     )
 
+    # Issue #4: Prevent double counting of midnight-crossing dwell sessions.
+    # Check the vessel's last observed ping on exec_date across all AIS pings.
+    vessel_day_max = (
+        ais_df.filter(F.to_date(F.col("BaseDateTime")) == F.to_date(F.lit(exec_date)))
+        .groupBy(F.col("MMSI").cast(LongType()).alias("v_mmsi"))
+        .agg(F.max("BaseDateTime").alias("day_last_ping"))
+    )
+
+    day_end_ts = F.unix_timestamp(F.to_timestamp(F.concat(F.lit(exec_date), F.lit(" 23:59:59"))))
+    time_to_day_end = day_end_ts - F.unix_timestamp(F.col("exit_ts"))
+    is_open_ended = (time_to_day_end < 7200) & (
+        F.col("day_last_ping").isNull() | (F.col("day_last_ping") <= F.col("exit_ts"))
+    )
+
     result_df = (
         dwell_summary
+        .withColumn("mmsi_long", F.col("MMSI").cast(LongType()))
+        .join(vessel_day_max, F.col("mmsi_long") == F.col("v_mmsi"), "left")
+        # Attribute session to the day the visit concludes (exit_ts)
+        .filter(F.to_date(F.col("exit_ts")) == F.to_date(F.lit(exec_date)))
+        # Defer open-ended sessions crossing midnight to day T+1 where complete visit is captured
+        .filter(~is_open_ended)
         .withColumn("kpi_date", F.to_date(F.lit(exec_date)))
-        .withColumn("mmsi", F.col("MMSI").cast(LongType()))
+        .withColumn("mmsi", F.col("mmsi_long"))
         .withColumn("port_id", F.col("port_id").cast(StringType()))
         .withColumn("dwell_minutes", dwell_minutes)
         .select("kpi_date", "mmsi", "port_id", "entry_ts", "exit_ts", "dwell_minutes")
@@ -401,8 +550,9 @@ def main():
         SparkSession.builder
         .appName(f"Maritime-Batch-KPI-{exec_date}")
         .config("spark.sql.shuffle.partitions", "8")
-        .config("spark.executor.memory", "2g")
-        .config("spark.driver.memory", "1g")
+        # worker=6G; streaming=1.5G executor + 0.75G driver, batch=1.5G executor + 0.75G driver, leaving headroom for OS/JVM overhead — both can run concurrently
+        .config("spark.executor.memory", "1536m")
+        .config("spark.driver.memory", "768m")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
@@ -423,7 +573,20 @@ def main():
         ports_df = load_port_references(spark)
 
         # 3. Compute KPI 1: Port Dwell Times
-        dwell_df = compute_port_dwell_times(ais_df, ports_df, exec_date, port_radius_nm)
+        # Attempt to include previous day's partition to allow midnight-spanning dwell sessions
+        dwell_ais_df = ais_df
+        try:
+            curr_dt = datetime.strptime(exec_date, "%Y-%m-%d")
+            prev_date = (curr_dt - timedelta(days=1)).strftime("%Y-%m-%d")
+            prev_partition = f"{HDFS_ARCHIVE_BASE}/date={prev_date}"
+            prev_df = spark.read.parquet(prev_partition)
+            if prev_df.take(1):
+                log.info("Found previous day partition %s. Merging for midnight-spanning dwell detection.", prev_partition)
+                dwell_ais_df = prev_df.unionByName(ais_df)
+        except Exception as e:
+            log.info("Previous day partition not available (%s); computing dwell times for %s standalone.", e, exec_date)
+
+        dwell_df = compute_port_dwell_times(dwell_ais_df, ports_df, exec_date, port_radius_nm)
 
         # 4. Compute KPI 2: Fleet Daily Speed KPIs
         kpis_df = compute_fleet_daily_kpis(ais_df, exec_date)
@@ -434,52 +597,72 @@ def main():
         # 6. Extract speed alerts
         alerts_df = extract_speed_alerts(ais_df, exec_date, speed_threshold=20.0)
 
-        # 7. Write to PostGIS with idempotent delete-then-insert per partition date
+        # 7. Write to PostGIS with staging + upsert pattern for analytical tables
         # Table 1: port_dwell_times
-        delete_partition_date("port_dwell_times", "kpi_date", exec_date)
-        log.info("Writing port_dwell_times to PostGIS...")
-        (
-            dwell_df.write
-            .format("jdbc")
-            .option("url", JDBC_URL)
-            .option("dbtable", "port_dwell_times")
-            .options(**JDBC_PROPERTIES)
-            .mode("append")
-            .save()
+        upsert_via_staging(
+            df=dwell_df,
+            target_table="port_dwell_times",
+            staging_table="stg_port_dwell_times",
+            create_staging_ddl="""
+                CREATE TABLE IF NOT EXISTS stg_port_dwell_times (
+                    kpi_date DATE,
+                    mmsi BIGINT,
+                    port_id VARCHAR,
+                    entry_ts TIMESTAMP,
+                    exit_ts TIMESTAMP,
+                    dwell_minutes NUMERIC
+                );
+            """,
+            columns=["kpi_date", "mmsi", "port_id", "entry_ts", "exit_ts", "dwell_minutes"],
+            conflict_cols=["kpi_date", "mmsi", "port_id", "entry_ts"],
+            update_cols=["exit_ts", "dwell_minutes"],
+            exec_date=exec_date,
         )
-        log.info("Successfully wrote port_dwell_times.")
 
         # Table 2: fleet_daily_kpis
-        delete_partition_date("fleet_daily_kpis", "kpi_date", exec_date)
-        log.info("Writing fleet_daily_kpis to PostGIS...")
-        (
-            kpis_df.write
-            .format("jdbc")
-            .option("url", JDBC_URL)
-            .option("dbtable", "fleet_daily_kpis")
-            .options(**JDBC_PROPERTIES)
-            .mode("append")
-            .save()
+        upsert_via_staging(
+            df=kpis_df,
+            target_table="fleet_daily_kpis",
+            staging_table="stg_fleet_daily_kpis",
+            create_staging_ddl="""
+                CREATE TABLE IF NOT EXISTS stg_fleet_daily_kpis (
+                    kpi_date DATE,
+                    vessel_type VARCHAR,
+                    avg_sog NUMERIC,
+                    min_sog NUMERIC,
+                    max_sog NUMERIC,
+                    stddev_sog NUMERIC,
+                    ping_count BIGINT
+                );
+            """,
+            columns=["kpi_date", "vessel_type", "avg_sog", "min_sog", "max_sog", "stddev_sog", "ping_count"],
+            conflict_cols=["kpi_date", "vessel_type"],
+            update_cols=["avg_sog", "min_sog", "max_sog", "stddev_sog", "ping_count"],
+            exec_date=exec_date,
         )
-        log.info("Successfully wrote fleet_daily_kpis.")
 
         # Table 3: route_density_grid
-        delete_partition_date("route_density_grid", "kpi_date", exec_date)
-        log.info("Writing route_density_grid to PostGIS...")
-        (
-            density_df.write
-            .format("jdbc")
-            .option("url", JDBC_URL)
-            .option("dbtable", "route_density_grid")
-            .options(**JDBC_PROPERTIES)
-            .mode("append")
-            .save()
+        upsert_via_staging(
+            df=density_df,
+            target_table="route_density_grid",
+            staging_table="stg_route_density_grid",
+            create_staging_ddl="""
+                CREATE TABLE IF NOT EXISTS stg_route_density_grid (
+                    kpi_date DATE,
+                    grid_lat NUMERIC,
+                    grid_lon NUMERIC,
+                    ping_count BIGINT
+                );
+            """,
+            columns=["kpi_date", "grid_lat", "grid_lon", "ping_count"],
+            conflict_cols=["kpi_date", "grid_lat", "grid_lon"],
+            update_cols=["ping_count"],
+            exec_date=exec_date,
         )
-        log.info("Successfully wrote route_density_grid.")
 
         # Table 4: vessel_speed_alerts
-        # Delete alerts matching this date
-        delete_partition_date("vessel_speed_alerts", "DATE(detected_at)", exec_date)
+        # Scoped clean of alerts matching execution date before write
+        delete_alerts_by_date(exec_date)
         alert_count = alerts_df.count()
         if alert_count > 0:
             log.info("Writing %d speed alerts to PostGIS...", alert_count)

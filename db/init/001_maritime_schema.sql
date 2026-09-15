@@ -49,11 +49,13 @@ CREATE INDEX IF NOT EXISTS idx_active_fleet_state_last_updated
 
 -- ----------------------------------------------------------------------------
 -- 2. geofence_boundaries
+--    Provisioned for future geofencing/collision-risk features; not currently written to by any pipeline component.
 --    Port / anchorage / restricted-zone polygons for geofencing.
 --    Seeded with sample Egyptian ports below.
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS geofence_boundaries (
     id           SERIAL          PRIMARY KEY,
+    port_ref_id  VARCHAR(50),
     port_name    VARCHAR(100)    NOT NULL,
     zone_type    VARCHAR(50)     NOT NULL DEFAULT 'port',
     country_code VARCHAR(10)     NOT NULL DEFAULT 'EG',
@@ -97,6 +99,7 @@ ON CONFLICT DO NOTHING;
 
 -- ----------------------------------------------------------------------------
 -- 3. collision_risk_alerts
+--    Provisioned for future geofencing/collision-risk features; not currently written to by any pipeline component.
 --    Written by the Spark streaming collision-detection module when two
 --    vessels are within a configured CPA (closest point of approach) threshold.
 -- ----------------------------------------------------------------------------
@@ -123,6 +126,7 @@ CREATE INDEX IF NOT EXISTS idx_collision_risk_alerts_mmsi
 
 -- ----------------------------------------------------------------------------
 -- 4. port_congestion
+--    Provisioned for future geofencing/collision-risk features; not currently written to by any pipeline component.
 --    Rolling per-port vessel counts and speed statistics.
 --    Updated by the Airflow batch step or Spark streaming aggregations.
 -- ----------------------------------------------------------------------------
@@ -140,6 +144,7 @@ CREATE INDEX IF NOT EXISTS idx_port_congestion_port_id
 
 -- ----------------------------------------------------------------------------
 -- 5. port_geofence_events
+--    Provisioned for future geofencing/collision-risk features; not currently written to by any pipeline component.
 --    Log of vessel enter / inside / exit events per port zone.
 --    Mirrors the Kafka topic port_geofence_events.
 -- ----------------------------------------------------------------------------

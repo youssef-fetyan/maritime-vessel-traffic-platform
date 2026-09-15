@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- Smart Maritime Vessel Traffic & Port Intelligence Platform
 -- Layer 5: Vessel Behavior Clusters & Anomaly Detection
 -- ============================================================================
@@ -6,7 +6,7 @@
 -- Table: vessel_behavior_clusters
 -- Purpose:
 --   Materializes daily K-Means behavioral clustering results and distance-to-centroid
---   anomaly flags computed by the PySpark MLlib / Mahout clustering pipeline.
+--   anomaly flags computed by the PySpark MLlib clustering pipeline.
 --
 -- Foreign Key Note:
 --   A foreign key to active_fleet_state(mmsi) is explicitly omitted because

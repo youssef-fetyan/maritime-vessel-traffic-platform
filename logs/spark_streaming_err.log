@@ -2,7 +2,7 @@ Ivy Default Cache set to: /root/.ivy2/cache
 The jars for the packages stored in: /root/.ivy2/jars
 org.apache.spark#spark-sql-kafka-0-10_2.12 added as a dependency
 org.postgresql#postgresql added as a dependency
-:: resolving dependencies :: org.apache.spark#spark-submit-parent-4a093977-3aec-415d-a8de-eb3d680e0620;1.0
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-3f93ebd3-caca-4ad1-972a-25b4bb8a31ca;1.0
 	confs: [default]
 	found org.apache.spark#spark-sql-kafka-0-10_2.12;3.3.0 in central
 	found org.apache.spark#spark-token-provider-kafka-0-10_2.12;3.3.0 in central
@@ -18,7 +18,35 @@ org.postgresql#postgresql added as a dependency
 	found org.apache.commons#commons-pool2;2.11.1 in central
 	found org.postgresql#postgresql;42.6.0 in central
 	found org.checkerframework#checker-qual;3.31.0 in central
-:: resolution report :: resolve 811ms :: artifacts dl 33ms
+downloading https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar ...
+	[SUCCESSFUL ] org.apache.spark#spark-sql-kafka-0-10_2.12;3.3.0!spark-sql-kafka-0-10_2.12.jar (1001ms)
+downloading https://repo1.maven.org/maven2/org/postgresql/postgresql/42.6.0/postgresql-42.6.0.jar ...
+	[SUCCESSFUL ] org.postgresql#postgresql;42.6.0!postgresql.jar (2371ms)
+downloading https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.3.0/spark-token-provider-kafka-0-10_2.12-3.3.0.jar ...
+	[SUCCESSFUL ] org.apache.spark#spark-token-provider-kafka-0-10_2.12;3.3.0!spark-token-provider-kafka-0-10_2.12.jar (185ms)
+downloading https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/2.8.1/kafka-clients-2.8.1.jar ...
+	[SUCCESSFUL ] org.apache.kafka#kafka-clients;2.8.1!kafka-clients.jar (3125ms)
+downloading https://repo1.maven.org/maven2/com/google/code/findbugs/jsr305/3.0.0/jsr305-3.0.0.jar ...
+	[SUCCESSFUL ] com.google.code.findbugs#jsr305;3.0.0!jsr305.jar (162ms)
+downloading https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.1/commons-pool2-2.11.1.jar ...
+	[SUCCESSFUL ] org.apache.commons#commons-pool2;2.11.1!commons-pool2.jar (264ms)
+downloading https://repo1.maven.org/maven2/org/spark-project/spark/unused/1.0.0/unused-1.0.0.jar ...
+	[SUCCESSFUL ] org.spark-project.spark#unused;1.0.0!unused.jar (157ms)
+downloading https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/3.3.2/hadoop-client-runtime-3.3.2.jar ...
+	[SUCCESSFUL ] org.apache.hadoop#hadoop-client-runtime;3.3.2!hadoop-client-runtime.jar (10091ms)
+downloading https://repo1.maven.org/maven2/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar ...
+	[SUCCESSFUL ] org.lz4#lz4-java;1.8.0!lz4-java.jar (346ms)
+downloading https://repo1.maven.org/maven2/org/xerial/snappy/snappy-java/1.1.8.4/snappy-java-1.1.8.4.jar ...
+	[SUCCESSFUL ] org.xerial.snappy#snappy-java;1.1.8.4!snappy-java.jar(bundle) (848ms)
+downloading https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.32/slf4j-api-1.7.32.jar ...
+	[SUCCESSFUL ] org.slf4j#slf4j-api;1.7.32!slf4j-api.jar (166ms)
+downloading https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/3.3.2/hadoop-client-api-3.3.2.jar ...
+	[SUCCESSFUL ] org.apache.hadoop#hadoop-client-api;3.3.2!hadoop-client-api.jar (9591ms)
+downloading https://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.3/commons-logging-1.1.3.jar ...
+	[SUCCESSFUL ] commons-logging#commons-logging;1.1.3!commons-logging.jar (192ms)
+downloading https://repo1.maven.org/maven2/org/checkerframework/checker-qual/3.31.0/checker-qual-3.31.0.jar ...
+	[SUCCESSFUL ] org.checkerframework#checker-qual;3.31.0!checker-qual.jar (524ms)
+:: resolution report :: resolve 37866ms :: artifacts dl 29039ms
 	:: modules in use:
 	com.google.code.findbugs#jsr305;3.0.0 from central in [default]
 	commons-logging#commons-logging;1.1.3 from central in [default]
@@ -38,8 +66,9 @@ org.postgresql#postgresql added as a dependency
 	|                  |            modules            ||   artifacts   |
 	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
 	---------------------------------------------------------------------
-	|      default     |   14  |   0   |   0   |   0   ||   14  |   0   |
+	|      default     |   14  |   14  |   14  |   0   ||   14  |   14  |
 	---------------------------------------------------------------------
-:: retrieving :: org.apache.spark#spark-submit-parent-4a093977-3aec-415d-a8de-eb3d680e0620
+:: retrieving :: org.apache.spark#spark-submit-parent-3f93ebd3-caca-4ad1-972a-25b4bb8a31ca
 	confs: [default]
-	0 artifacts copied, 14 already retrieved (0kB/21ms)
+	14 artifacts copied, 0 already retrieved (57906kB/93ms)
+

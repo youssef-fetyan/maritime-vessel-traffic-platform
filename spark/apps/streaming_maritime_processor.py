@@ -140,42 +140,26 @@ REJECTED_PATH: str = _env("REJECTED_PATH", f"{HDFS_BASE}/rejected/ais_streaming"
 # Sharing a checkpoint directory across independent queries is a serious bug:
 # queries race to write the same offset files and corrupt each other's state,
 # causing data loss and phantom re-processing on restart.
-# The _v2 suffix avoids conflicts with the old single-query checkpoint state.
 CHECKPOINT_ROOT: str = _env(
     "CHECKPOINT_ROOT", f"{HDFS_BASE}/checkpoints/ais_streaming_v2"
 )
-CHECKPOINT_POSTGIS: str = f"{CHECKPOINT_ROOT}/postgis"
-CHECKPOINT_KAFKA_ALERTS: str = f"{CHECKPOINT_ROOT}/kafka_alerts"
-CHECKPOINT_HDFS_ARCHIVE: str = f"{CHECKPOINT_ROOT}/hdfs_archive"
+CHECKPOINT_PRIMARY: str = f"{CHECKPOINT_ROOT}/primary"
 CHECKPOINT_REJECTS: str = f"{CHECKPOINT_ROOT}/rejects"
 CHECKPOINT_JSON_REJECTS: str = f"{CHECKPOINT_ROOT}/json_rejects"
 
 SPEED_ALERT_THRESHOLD_KNOTS: float = float(_env("SPEED_ALERT_THRESHOLD_KNOTS", "20.0"))
 MAX_RECORDS_PER_FILE: int = int(_env("MAX_RECORDS_PER_FILE", "1000000"))
 
-# Delta Lake ACID path (preserved from prior version)
-try:
-    from delta.tables import DeltaTable  # noqa: F401
-    DELTA_AVAILABLE = True
-except ImportError:
-    DELTA_AVAILABLE = False
-
 
 # ============================================================
 # SPARK SESSION
 # ============================================================
 
-_builder = SparkSession.builder.appName("AIS-MultiSink-Streaming")
-if DELTA_AVAILABLE:
-    _builder = (
-        _builder
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        )
-    )
-spark: SparkSession = _builder.getOrCreate()
+spark: SparkSession = (
+    SparkSession.builder
+    .appName("AIS-MultiSink-Streaming")
+    .getOrCreate()
+)
 spark.sparkContext.setLogLevel("WARN")
 
 
@@ -227,7 +211,6 @@ print(f"Checkpoint root      : {CHECKPOINT_ROOT}")
 print(f"Speed threshold      : {SPEED_ALERT_THRESHOLD_KNOTS} knots")
 print(f"maxOffsetsPerTrigger : {MAX_OFFSETS_PER_TRIGGER}")
 print(f"maxRecordsPerFile    : {MAX_RECORDS_PER_FILE}")
-print(f"Delta available      : {DELTA_AVAILABLE}")
 if RUN_MODE == "live":
     print(f"Trigger              : processingTime every {LIVE_TRIGGER_SECONDS}s")
 else:
@@ -357,11 +340,22 @@ _valid_latlon = (
 latlon_rejects: DataFrame = candidates.filter(~_valid_latlon)
 candidates = candidates.filter(_valid_latlon)
 
-# Combine all validation-level rejects into one side-stream
+# Combine all validation-level rejects into one side-stream.
+# All reject-stream columns are intentionally cast to StringType for triage purposes
+# and uniform Parquet schema consistency across micro-batches.
+timestamp_rejects_typed = timestamp_rejects.select(
+    [col(c).cast(StringType()).alias(c) for c in timestamp_rejects.columns]
+)
+latlon_rejects_typed = latlon_rejects.select(
+    [col(c).cast(StringType()).alias(c) for c in latlon_rejects.columns]
+)
+mmsi_rejects_typed = mmsi_rejects.select(
+    [col(c).cast(StringType()).alias(c) for c in mmsi_rejects.columns]
+)
 validation_rejects: DataFrame = (
-    timestamp_rejects
-    .unionByName(latlon_rejects, allowMissingColumns=True)
-    .unionByName(mmsi_rejects,   allowMissingColumns=True)
+    timestamp_rejects_typed
+    .unionByName(latlon_rejects_typed, allowMissingColumns=True)
+    .unionByName(mmsi_rejects_typed,   allowMissingColumns=True)
 )
 
 
@@ -605,7 +599,7 @@ def upsert_fleet_state(batch_df: DataFrame, batch_id: int) -> None:
         return
 
     # 2. Partition by key (MMSI) to eliminate concurrent cross-task lock contention
-    spatial_df = spatial_df.repartition(4, "mmsi")
+    spatial_df = spatial_df.repartition(4, "MMSI")
 
     log.info("Sink A (PostGIS) batch %d: upserting %d rows.", batch_id, count)
     try:
@@ -620,47 +614,92 @@ def upsert_fleet_state(batch_df: DataFrame, batch_id: int) -> None:
 
 
 # ============================================================
-# SINK B: Kafka speed-violation alerts
+# SINK B: Kafka & PostGIS speed-violation alerts
 # ============================================================
+
+_INSERT_SPEED_ALERT_SQL: str = (
+    "INSERT INTO vessel_speed_alerts "
+    "(detected_at, mmsi, vessel_name, sog_knots, lat, lon, nav_status, alert_type, threshold_knots) "
+    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+)
+
+def _write_alerts_partition_to_postgis(partition_iter: Iterator) -> None:
+    """
+    Worker-side foreachPartition writer inserting speed alerts directly
+    into PostGIS table vessel_speed_alerts via pure-Python pg8000.
+    """
+    rows = list(partition_iter)
+    if not rows:
+        return
+
+    values = []
+    for row in rows:
+        values.append((
+            row["detected_at"],
+            int(row["MMSI"]),
+            row["VesselName"],
+            float(row["SOG"]) if row["SOG"] is not None else None,
+            float(row["LAT"]) if row["LAT"] is not None else None,
+            float(row["LON"]) if row["LON"] is not None else None,
+            str(row["Status"]) if row["Status"] is not None else None,
+            "SPEED_VIOLATION",
+            float(SPEED_ALERT_THRESHOLD_KNOTS),
+        ))
+
+    # Sort deterministically by MMSI and timestamp to enforce consistent lock acquisition
+    values.sort(key=lambda x: (x[1], str(x[0])))
+
+    conn = None
+    cur = None
+    try:
+        conn = _make_pg_connection()
+        cur = conn.cursor()
+        cur.executemany(_INSERT_SPEED_ALERT_SQL, values)
+        conn.commit()
+    except Exception:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
 
 def publish_speed_alerts(batch_df: DataFrame, batch_id: int) -> None:
     """
-    foreachBatch handler for Sink B (Kafka vessel_speed_alerts).
-
-    A separate foreachBatch query is used (not bundled with upsert_fleet_state)
-    so the two sinks have independent checkpoint lifecycles:
-      - A PostGIS failure must not block alert publication.
-      - A Kafka broker hiccup must not cause an unnecessary PostGIS upsert replay.
-
-    Alert payload is built with to_json(struct(...)) so serialisation
-    stays in Spark distributed execution -- no Python driver-side row loop.
-
-    Parameters
-    ----------
-    batch_df : DataFrame
-    batch_id : int
+    Publish speed violation alerts to Kafka topic vessel_speed_alerts
+    AND persist directly to PostGIS table vessel_speed_alerts for real-time dashboard visibility.
     """
     alert_df = batch_df.filter(
         col("SOG").isNotNull() & (col("SOG") > SPEED_ALERT_THRESHOLD_KNOTS)
     )
     count = alert_df.count()
     if count == 0:
-        # Explicitly guard: writing an empty Kafka batch is a wasted round trip.
         log.info(
-            "Sink B (Kafka alerts) batch %d: no violations (SOG > %.1f kts), skipping.",
+            "Sink B (Alerts) batch %d: no violations (SOG > %.1f kts), skipping.",
             batch_id, SPEED_ALERT_THRESHOLD_KNOTS,
         )
         return
 
     log.info(
-        "Sink B (Kafka alerts) batch %d: %d violation(s) (SOG > %.1f kts).",
+        "Sink B (Alerts) batch %d: %d violation(s) (SOG > %.1f kts).",
         batch_id, count, SPEED_ALERT_THRESHOLD_KNOTS,
     )
     try:
+        # 1. Emit alerts to Kafka topic
         alert_payload_df = alert_df.select(
-            # Kafka message key: MMSI as string for topic partition routing
             col("MMSI").cast(StringType()).alias("key"),
-            # Kafka message value: JSON-serialised alert struct
             to_json(
                 struct(
                     col("MMSI").alias("mmsi"),
@@ -672,8 +711,6 @@ def publish_speed_alerts(batch_df: DataFrame, batch_id: int) -> None:
                     col("Status").alias("nav_status"),
                     lit("SPEED_VIOLATION").alias("alert_type"),
                     lit(SPEED_ALERT_THRESHOLD_KNOTS).alias("threshold_knots"),
-                    # Processing-time stamp: when Spark detected the violation,
-                    # independent of BaseDateTime (the vessel's own clock).
                     current_timestamp().alias("detected_at"),
                 )
             ).alias("value"),
@@ -689,46 +726,42 @@ def publish_speed_alerts(batch_df: DataFrame, batch_id: int) -> None:
             "Sink B (Kafka alerts) batch %d: published %d alerts to %s.",
             batch_id, count, ALERT_TOPIC_SPEED,
         )
+
+        # 2. Persist directly to PostGIS table vessel_speed_alerts for live dashboard visibility
+        alert_db_df = (
+            alert_df
+            .withColumn("detected_at", current_timestamp())
+            .repartition(4, "MMSI")
+        )
+        alert_db_df.foreachPartition(_write_alerts_partition_to_postgis)
+        log.info(
+            "Sink B (PostGIS alerts) batch %d: persisted %d alerts to PostGIS vessel_speed_alerts.",
+            batch_id, count,
+        )
     except Exception as exc:
         log.error(
-            "Sink B (Kafka alerts) batch %d: write failed -- %s: %s",
+            "Sink B (Alerts) batch %d: write failed -- %s: %s",
             batch_id, type(exc).__name__, exc,
         )
         raise
 
 
 # ============================================================
-# SINK C: HDFS Parquet / Delta archival
+# SINK C: HDFS Parquet archival
 # ============================================================
 
 def archive_to_hdfs(batch_df: DataFrame, batch_id: int) -> None:
     """
-    foreachBatch handler for Sink C (HDFS Parquet / Delta archive).
-
-    Archives the full-fidelity cleaned record (all columns including ancillary
-    fields like VesselType, Draft, Cargo) partitioned by date.  This is the
-    source-of-truth data lake landing zone for downstream Airflow / ML jobs.
-
-    Small-files mitigation
-    ~~~~~~~~~~~~~~~~~~~~~~
-    coalesce(target_partitions) collapses each micro-batch so each output file
-    contains at most MAX_RECORDS_PER_FILE rows.  target_partitions = ceil(
-    row_count / MAX_RECORDS_PER_FILE), minimum 1.  maxRecordsPerFile provides
-    a secondary Parquet-writer-level guard.
-
-    Parameters
-    ----------
-    batch_df : DataFrame
-    batch_id : int
+    foreachBatch handler for Sink C (HDFS Parquet archive).
+    Archives full-fidelity cleaned records partitioned by date.
     """
-    batch_df.persist()
     count = batch_df.count()
     if count == 0:
         log.info("Sink C (HDFS archive) batch %d: empty batch, skipping.", batch_id)
-        batch_df.unpersist()
         return
 
     log.info("Sink C (HDFS archive) batch %d: archiving %d rows.", batch_id, count)
+    # Optional marker retained for manual micro-batch audit and pipeline completeness checks
     marker_path = f"{ARCHIVE_PATH}/_batch_markers/{batch_id}"
     target_parts = max(1, (count + MAX_RECORDS_PER_FILE - 1) // MAX_RECORDS_PER_FILE)
     writer = (
@@ -738,15 +771,10 @@ def archive_to_hdfs(batch_df: DataFrame, batch_id: int) -> None:
         .option("maxRecordsPerFile", MAX_RECORDS_PER_FILE)
     )
     try:
-        if DELTA_AVAILABLE:
-            writer.format("delta").save(ARCHIVE_PATH)
-        else:
-            writer.format("parquet").save(ARCHIVE_PATH)
-            # Idempotency marker: lets a resumed job detect already-written batches
-            # when not using Delta Lake (Delta handles this natively via txn log).
-            spark.createDataFrame(
-                [(batch_id,)], ["batch_id"]
-            ).write.mode("overwrite").json(marker_path)
+        writer.format("parquet").save(ARCHIVE_PATH)
+        spark.createDataFrame(
+            [(batch_id,)], ["batch_id"]
+        ).write.mode("overwrite").json(marker_path)
         log.info(
             "Sink C (HDFS archive) batch %d: wrote %d rows to %s.",
             batch_id, count, ARCHIVE_PATH,
@@ -757,6 +785,40 @@ def archive_to_hdfs(batch_df: DataFrame, batch_id: int) -> None:
             batch_id, type(exc).__name__, exc,
         )
         raise
+
+
+# ============================================================
+# UNIFIED SINK HANDLER (Sinks A, B, C)
+# ============================================================
+
+def unified_sink(batch_df: DataFrame, batch_id: int) -> None:
+    """
+    Consolidated foreachBatch handler for all primary sinks (Sinks A, B, C).
+    Persists the micro-batch DataFrame in memory across all sub-sinks to ensure
+    Kafka records are read and processed exactly once per micro-batch.
+    """
+    batch_df.persist()
+    try:
+        # Sink A: Upsert latest vessel position into PostGIS active_fleet_state
+        try:
+            upsert_fleet_state(batch_df, batch_id)
+        except Exception as exc:
+            log.error("Sink A (PostGIS upsert) failed in batch %d: %s", batch_id, exc)
+            raise
+
+        # Sink B: Publish to Kafka alert topic and persist to PostGIS vessel_speed_alerts
+        try:
+            publish_speed_alerts(batch_df, batch_id)
+        except Exception as exc:
+            log.error("Sink B (Speed alerts) failed in batch %d: %s", batch_id, exc)
+            raise
+
+        # Sink C: Archive partitioned Parquet files to HDFS data lake
+        try:
+            archive_to_hdfs(batch_df, batch_id)
+        except Exception as exc:
+            log.error("Sink C (HDFS archive) failed in batch %d: %s", batch_id, exc)
+            raise
     finally:
         batch_df.unpersist()
 
@@ -846,39 +908,22 @@ else:
 # ============================================================
 # START STREAMING QUERIES
 # ============================================================
-# Three primary sinks + two reject side-streams = five independent queries.
-# Each MUST have its own checkpointLocation. Sharing checkpoint directories
-# across independent streaming queries is a serious operational bug that
-# leads to corrupt state, data loss, and phantom re-processing on restart.
+# One primary unified query (consolidating Sinks A, B, and C via unified_sink)
+# + two reject side-streams (validation rejects and json rejects).
+# Consolidating the primary sinks into a single foreachBatch attached to ONE writeStream
+# query ensures Kafka data is read and processed once per micro-batch, eliminating the
+# 3x Kafka read amplification of the prior independent query design.
 
-# Sink A: PostGIS fleet state
-query_postgis = (
+# Primary Unified Sink: PostGIS fleet state + Speed alerts (Kafka + PostGIS) + HDFS Parquet archive
+query_primary = (
     cleaned_stream.writeStream
-    .foreachBatch(upsert_fleet_state)
-    .option("checkpointLocation", CHECKPOINT_POSTGIS)
+    .foreachBatch(unified_sink)
+    .option("checkpointLocation", CHECKPOINT_PRIMARY)
     .trigger(**trigger_kwargs)
     .start()
 )
 
-# Sink B: Kafka speed alerts
-query_kafka_alerts = (
-    cleaned_stream.writeStream
-    .foreachBatch(publish_speed_alerts)
-    .option("checkpointLocation", CHECKPOINT_KAFKA_ALERTS)
-    .trigger(**trigger_kwargs)
-    .start()
-)
-
-# Sink C: HDFS Parquet / Delta archive
-query_hdfs_archive = (
-    cleaned_stream.writeStream
-    .foreachBatch(archive_to_hdfs)
-    .option("checkpointLocation", CHECKPOINT_HDFS_ARCHIVE)
-    .trigger(**trigger_kwargs)
-    .start()
-)
-
-# Reject side-streams (preserved + extended from prior version)
+# Reject side-streams (preserved for dead-letter diagnostics)
 query_rejects = (
     validation_rejects.writeStream
     .foreachBatch(write_rejects)
@@ -901,9 +946,7 @@ query_json_rejects = (
 # ============================================================
 
 all_queries = [
-    query_postgis,
-    query_kafka_alerts,
-    query_hdfs_archive,
+    query_primary,
     query_rejects,
     query_json_rejects,
 ]

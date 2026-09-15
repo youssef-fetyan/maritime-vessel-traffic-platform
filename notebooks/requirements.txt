@@ -1,0 +1,15 @@
+# notebooks/requirements.txt
+# Dependencies required by ML clustering and build_notebook.py
+# when running inside the Zeppelin container.
+#
+# Install with:
+#   pip install -r notebooks/requirements.txt
+#
+# These packages were previously vendored under notebooks/libs/ and have been
+# removed from version control. Install them at container build time instead.
+
+pg8000>=1.31.5
+python-dateutil>=2.9.0
+scramp>=1.4.17
+asn1crypto>=1.5.1
+six>=1.17.0
