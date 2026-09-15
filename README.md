@@ -13,36 +13,36 @@ A containerised, distributed analytics platform that ingests NOAA MarineCadastre
 flowchart LR
     subgraph INGEST["1. Ingestion & Streaming"]
         direction TB
-        PROD["AIS Producer<br/>(Historical CSV Replay)"] -->|raw_ais_positions| KAFKA["Apache Kafka<br/>(KRaft Broker)"]
-        KAFKA -->|Kafka Stream| SPARK_STR["Spark Structured Streaming<br/>(streaming_maritime_processor.py)"]
-        SPARK_STR -->|Sink A: UPSERT| PG_ACTIVE[("PostGIS<br/>active_fleet_state")]
-        SPARK_STR -->|Sink B: Speed Alerts| KAFKA_ALERTS["Kafka Topic<br/>vessel_speed_alerts"]
-        SPARK_STR -->|Sink C: Parquet Archive| HDFS_RAW[("HDFS /raw/ais_historical/<br/>date=YYYY-MM-DD/")]
-        SPARK_STR -->|Sink D: Rejects| HDFS_REJ[("HDFS /rejected/<br/>ais_streaming")]
+        PROD["AIS Producer<br/>(Historical CSV Replay)"] -->|"raw_ais_positions"| KAFKA["Apache Kafka<br/>(KRaft Broker)"]
+        KAFKA -->|"Kafka Stream"| SPARK_STR["Spark Structured Streaming<br/>(streaming_maritime_processor.py)"]
+        SPARK_STR -->|"Sink A: UPSERT"| PG_ACTIVE[("PostGIS<br/>active_fleet_state")]
+        SPARK_STR -->|"Sink B: Speed Alerts"| KAFKA_ALERTS["Kafka Topic<br/>vessel_speed_alerts"]
+        SPARK_STR -->|"Sink C: Parquet Archive"| HDFS_RAW[("HDFS /raw/ais_historical/<br/>date=YYYY-MM-DD/")]
+        SPARK_STR -->|"Sink D: Rejects"| HDFS_REJ[("HDFS /rejected/<br/>ais_streaming")]
     end
 
     subgraph BATCH["2. Batch Analytics & Orchestration"]
         direction TB
-        AIRFLOW["Apache Airflow<br/>(maritime_batch_kpi_pipeline)"] -->|1. Partition Check| HDFS_RAW
-        AIRFLOW -->|2. spark-submit (Batch KPIs)| SPARK_BATCH["Spark Batch KPI Processor<br/>(batch_port_kpi_processor.py)"]
-        HDFS_RAW -->|Historical Partition Read| SPARK_BATCH
-        PG_REF[("PostGIS<br/>port_reference")] -->|Port Centroids| SPARK_BATCH
-        SPARK_BATCH -->|Port Dwell Times| PG_DWELL[("PostGIS<br/>port_dwell_times")]
-        SPARK_BATCH -->|Fleet Speed KPIs| PG_KPIS[("PostGIS<br/>fleet_daily_kpis")]
-        SPARK_BATCH -->|Route Density Grid| PG_GRID[("PostGIS<br/>route_density_grid")]
-        SPARK_BATCH -->|Materialized Alerts| PG_ALERTS[("PostGIS<br/>vessel_speed_alerts")]
+        AIRFLOW["Apache Airflow<br/>(maritime_batch_kpi_pipeline)"] -->|"1. Partition Check"| HDFS_RAW
+        AIRFLOW -->|"2. spark-submit - Batch KPIs"| SPARK_BATCH["Spark Batch KPI Processor<br/>(batch_port_kpi_processor.py)"]
+        HDFS_RAW -->|"Historical Partition Read"| SPARK_BATCH
+        PG_REF[("PostGIS<br/>port_reference")] -->|"Port Centroids"| SPARK_BATCH
+        SPARK_BATCH -->|"Port Dwell Times"| PG_DWELL[("PostGIS<br/>port_dwell_times")]
+        SPARK_BATCH -->|"Fleet Speed KPIs"| PG_KPIS[("PostGIS<br/>fleet_daily_kpis")]
+        SPARK_BATCH -->|"Route Density Grid"| PG_GRID[("PostGIS<br/>route_density_grid")]
+        SPARK_BATCH -->|"Materialized Alerts"| PG_ALERTS[("PostGIS<br/>vessel_speed_alerts")]
     end
 
     subgraph LAYER5["3. Analytics & AI Layer"]
         direction TB
-        AIRFLOW -->|3. spark-submit (Clustering)| SPARK_ML["PySpark MLlib KMeans<br/>(vessel_clustering.py)"]
-        HDFS_RAW -->|StandardScaler & VectorAssembler| SPARK_ML
-        SPARK_ML -->|Persist Model Artifacts| HDFS_MODELS[("HDFS /models/<br/>vessel_clustering/date=YYYY-MM-DD/")]
-        SPARK_ML -->|Clustered Vessels & Anomalies| PG_CLUSTERS[("PostGIS<br/>vessel_behavior_clusters")]
-        AIRFLOW -->|4. Verify Row Counts| PG_CLUSTERS
+        AIRFLOW -->|"3. spark-submit - Clustering"| SPARK_ML["PySpark MLlib KMeans<br/>(vessel_clustering.py)"]
+        HDFS_RAW -->|"StandardScaler & VectorAssembler"| SPARK_ML
+        SPARK_ML -->|"Persist Model Artifacts"| HDFS_MODELS[("HDFS /models/<br/>vessel_clustering/date=YYYY-MM-DD/")]
+        SPARK_ML -->|"Clustered Vessels & Anomalies"| PG_CLUSTERS[("PostGIS<br/>vessel_behavior_clusters")]
+        AIRFLOW -->|"4. Verify Row Counts"| PG_CLUSTERS
 
-        ZEPPELIN["Apache Zeppelin Notebooks<br/>(Interactive Exploration :8091)"] -.->|Ad-hoc Analytics| HDFS_RAW
-        ZEPPELIN -.->|Cluster Validation| HDFS_MODELS
+        ZEPPELIN["Apache Zeppelin Notebooks<br/>(Interactive Exploration :8091)"] -.->|"Ad-hoc Analytics"| HDFS_RAW
+        ZEPPELIN -.->|"Cluster Validation"| HDFS_MODELS
     end
 
     subgraph SERVE["4. Visualization & BI Layer"]
